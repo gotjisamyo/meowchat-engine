@@ -9,9 +9,10 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.0",
+    "@hono/node-server": "^1.19.11",
+    "@line/bot-sdk": "^9.3.0",
     "hono": "^4.7.0",
-    "ioredis": "^5.4.2",
-    "@line/bot-sdk": "^9.3.0"
+    "ioredis": "^5.4.2"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

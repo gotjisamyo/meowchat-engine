@@ -1,3 +1,4 @@
+import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { redis } from "./memory/redis.js";
 import { lineWebhookHandler } from "./proxy/line-webhook.js";
@@ -50,6 +51,8 @@ async function start() {
     await registerDemoBot();
   }
 
+  serve({ fetch: app.fetch, port: PORT });
+
   console.log(`
 ╔════════════════════════════════════════╗
 ║  🐱 MeowChat Engine                   ║
@@ -60,8 +63,3 @@ async function start() {
 }
 
 start().catch(console.error);
-
-export default {
-  port: PORT,
-  fetch: app.fetch,
-};
