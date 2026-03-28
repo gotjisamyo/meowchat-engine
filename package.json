@@ -1,0 +1,21 @@
+{
+  "name": "meowchat-engine",
+  "version": "1.0.0",
+  "description": "MeowChat AI Proxy Engine — memory-efficient LINE chatbot backend",
+  "type": "module",
+  "scripts": {
+    "dev": "bun run --watch src/index.ts",
+    "start": "bun run src/index.ts",
+    "build": "bun build src/index.ts --outdir dist --target node"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.24.0",
+    "hono": "^4.7.0",
+    "ioredis": "^5.4.2",
+    "@line/bot-sdk": "^9.3.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.7.0"
+  }
+}

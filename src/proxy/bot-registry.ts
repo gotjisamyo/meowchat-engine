@@ -1,0 +1,72 @@
+import type { BotConfig } from "../types/index.js";
+import { redis } from "../memory/redis.js";
+
+// ─── Bot registry (stored in Redis, managed by MeowChat dashboard) ────────────
+
+export async function getBotConfig(botId: string): Promise<BotConfig | null> {
+  const raw = await redis.get(`botconfig:${botId}`);
+  if (!raw) return null;
+  return JSON.parse(raw) as BotConfig;
+}
+
+export async function saveBotConfig(config: BotConfig): Promise<void> {
+  await redis.set(`botconfig:${config.botId}`, JSON.stringify(config));
+}
+
+// ─── Example: register a demo bot (call this once during setup) ───────────────
+
+export async function registerDemoBot(): Promise<void> {
+  const demo: BotConfig = {
+    botId: "demo-bot-001",
+    botName: "น้องแมว",
+    businessName: "ร้านข้าวแม่มณี",
+    personalityMode: "friendly",
+    businessScope: [
+      "เมนูอาหาร ราคา วัตถุดิบ",
+      "รับออเดอร์และจัดส่ง",
+      "เวลาทำการและที่อยู่ร้าน",
+      "โปรโมชั่นและส่วนลด",
+    ],
+    lineChannelSecret: process.env.LINE_CHANNEL_SECRET ?? "",
+    lineChannelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN ?? "",
+    geminiApiKey: process.env.GEMINI_API_KEY ?? "",
+    model: "gemini-2.0-flash",
+    knowledgeBase: [
+      {
+        id: "menu-001",
+        topic: "เมนูอาหาร",
+        content:
+          "ข้าวผัดหมู ฿80 · ข้าวกะเพราไข่ดาว ฿75 · ข้าวมันไก่ ฿70 · " +
+          "ผัดไทยกุ้งสด ฿90 · ต้มยำกุ้ง ฿120 · แกงเขียวหวาน ฿85",
+        keywords: ["เมนู", "อาหาร", "ข้าว", "ผัด", "กะเพรา", "มันไก่"],
+      },
+      {
+        id: "delivery-001",
+        topic: "จัดส่ง",
+        content:
+          "จัดส่งในรัศมี 5 กม. ค่าส่ง ฿20 หรือฟรีเมื่อสั่งครบ ฿200 " +
+          "รับออเดอร์ถึง 20:00 น. จัดส่งประมาณ 30–45 นาที",
+        keywords: ["ส่ง", "จัดส่ง", "delivery", "ค่าส่ง", "รับที่ร้าน"],
+      },
+      {
+        id: "hours-001",
+        topic: "เวลาทำการ",
+        content:
+          "เปิดทุกวัน 08:00–21:00 น. หยุดวันพุธ " +
+          "ที่อยู่: 123 ถ.สุขุมวิท ซ.11 กรุงเทพฯ โทร 02-123-4567",
+        keywords: ["เปิด", "ปิด", "เวลา", "วัน", "ที่อยู่", "โทร"],
+      },
+      {
+        id: "promo-001",
+        topic: "โปรโมชั่น",
+        content:
+          "ลูกค้าใหม่รับส่วนลด 10% เมื่อสั่งครั้งแรก ใช้โค้ด NEWMAE " +
+          "สั่งครบ 3 เมนูรับน้ำดื่มฟรี 1 ขวด",
+        keywords: ["โปร", "ส่วนลด", "ลด", "โค้ด", "ฟรี", "โปรโมชั่น"],
+      },
+    ],
+  };
+
+  await saveBotConfig(demo);
+  console.log("[registry] demo bot registered:", demo.botId);
+}
