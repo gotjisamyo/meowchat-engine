@@ -107,11 +107,11 @@ async function processLineEvent(
     channel: "line",
   };
 
-  const reply = await handleMessage(webhookEvent, config);
+  const { reply, escalated } = await handleMessage(webhookEvent, config);
   await replyToLine(reply, replyToken, config.lineChannelAccessToken);
 
   // Fire-and-forget: log conversation to backend for merchant dashboard
-  logConversationToBackend(config.botId, userId, userText, reply).catch(
+  logConversationToBackend(config.botId, userId, userText, reply, escalated).catch(
     (e) => console.warn("[engine] conversation log failed:", e)
   );
 }
@@ -121,7 +121,7 @@ async function processLineEvent(
 async function handleMessage(
   event: LineWebhookEvent,
   config: BotConfig
-): Promise<string> {
+): Promise<{ reply: string; escalated: boolean }> {
   const startMs = Date.now();
 
   // 1. Load or create customer profile
@@ -140,8 +140,7 @@ async function handleMessage(
   if (shouldEscalate(event.text, profile)) {
     profile.escalationFlag = true;
     await saveProfile(profile);
-    // TODO: notify merchant via LINE Notify or webhook
-    return buildEscalationMessage(config.botName);
+    return { reply: buildEscalationMessage(config.botName), escalated: true };
   }
 
   // 4. Add user turn to buffer
@@ -176,7 +175,7 @@ async function handleMessage(
   const latencyMs = Date.now() - startMs;
   console.log(`[engine] done in ${latencyMs}ms`);
 
-  return reply;
+  return { reply, escalated: false };
 }
 
 // ─── Log conversation to backend (for merchant dashboard) ────────────────────
@@ -185,7 +184,8 @@ async function logConversationToBackend(
   botId: string,
   lineUserId: string,
   userText: string,
-  botReply: string
+  botReply: string,
+  escalated = false
 ): Promise<void> {
   const backendUrl = process.env.BACKEND_URL;
   const internalKey = process.env.INTERNAL_API_KEY;
@@ -197,7 +197,7 @@ async function logConversationToBackend(
       "Content-Type": "application/json",
       "x-internal-key": internalKey,
     },
-    body: JSON.stringify({ botId, lineUserId, userText, botReply }),
+    body: JSON.stringify({ botId, lineUserId, userText, botReply, escalated }),
   });
 }
 
