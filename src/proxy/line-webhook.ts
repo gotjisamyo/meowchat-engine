@@ -109,6 +109,11 @@ async function processLineEvent(
 
   const reply = await handleMessage(webhookEvent, config);
   await replyToLine(reply, replyToken, config.lineChannelAccessToken);
+
+  // Fire-and-forget: log conversation to backend for merchant dashboard
+  logConversationToBackend(config.botId, userId, userText, reply).catch(
+    (e) => console.warn("[engine] conversation log failed:", e)
+  );
 }
 
 // ─── Core message handling pipeline ──────────────────────────────────────────
@@ -172,6 +177,28 @@ async function handleMessage(
   console.log(`[engine] done in ${latencyMs}ms`);
 
   return reply;
+}
+
+// ─── Log conversation to backend (for merchant dashboard) ────────────────────
+
+async function logConversationToBackend(
+  botId: string,
+  lineUserId: string,
+  userText: string,
+  botReply: string
+): Promise<void> {
+  const backendUrl = process.env.BACKEND_URL;
+  const internalKey = process.env.INTERNAL_API_KEY;
+  if (!backendUrl || !internalKey) return; // not configured, skip silently
+
+  await fetch(`${backendUrl}/api/internal/log`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-internal-key": internalKey,
+    },
+    body: JSON.stringify({ botId, lineUserId, userText, botReply }),
+  });
 }
 
 // ─── Passive preference extraction ───────────────────────────────────────────

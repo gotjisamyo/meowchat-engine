@@ -3,7 +3,7 @@ import { Hono } from "hono";
 import { redis } from "./memory/redis.js";
 import { lineWebhookHandler } from "./proxy/line-webhook.js";
 import { registerDemoBot } from "./proxy/bot-registry.js";
-import { saveBotConfig } from "./proxy/bot-registry.js";
+import { saveBotConfig, getBotConfig } from "./proxy/bot-registry.js";
 import type { BotConfig } from "./types/index.js";
 
 // ─── App ──────────────────────────────────────────────────────────────────────
@@ -37,6 +37,18 @@ app.post("/admin/bots", async (c) => {
   const config = (await c.req.json()) as BotConfig;
   await saveBotConfig(config);
   return c.json({ ok: true, botId: config.botId });
+});
+
+// ─── GET bot config (for KB sync from backend) ───────────────────────────────
+
+app.get("/admin/bots/:botId", async (c) => {
+  const apiKey = c.req.header("x-admin-key");
+  if (apiKey !== process.env.ADMIN_API_KEY) {
+    return c.json({ error: "unauthorized" }, 401);
+  }
+  const config = await getBotConfig(c.req.param("botId"));
+  if (!config) return c.json({ error: "not found" }, 404);
+  return c.json(config);
 });
 
 // ─── Start ────────────────────────────────────────────────────────────────────
