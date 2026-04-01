@@ -135,7 +135,7 @@ async function processLineEvent(
   };
 
   const { reply, escalated } = await handleMessage(webhookEvent, config);
-  await replyToLine(reply, replyToken, config.lineChannelAccessToken);
+  await replyToLine(replyToken, reply, config.lineChannelAccessToken);
 
   // Fire-and-forget: log conversation to backend for merchant dashboard
   logConversationToBackend(config.botId, userId, userText, reply, escalated).catch(
