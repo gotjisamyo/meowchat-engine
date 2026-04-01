@@ -52,7 +52,7 @@ app.get("/admin/bots/:botId", async (c) => {
 });
 
 // ─── Debug: list all registered bots ─────────────────────────────────────────
-app.get("/admin/bots", async (c) => {
+app.get("/admin/list", async (c) => {
   const apiKey = c.req.header("x-admin-key");
   if (apiKey !== process.env.ADMIN_API_KEY) {
     return c.json({ error: "unauthorized" }, 401);
