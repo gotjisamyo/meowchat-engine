@@ -1,16 +1,37 @@
 import type { BotConfig } from "../types/index.js";
 import { redis } from "../memory/redis.js";
 
-// ─── Bot registry (stored in Redis, managed by MeowChat dashboard) ────────────
+// ─── In-memory fallback (survives Redis hiccups within the same process) ──────
+const memCache = new Map<string, BotConfig>();
+
+// ─── Bot registry (Redis primary, in-memory fallback) ─────────────────────────
 
 export async function getBotConfig(botId: string): Promise<BotConfig | null> {
-  const raw = await redis.get(`botconfig:${botId}`);
-  if (!raw) return null;
-  return JSON.parse(raw) as BotConfig;
+  // 1. Try Redis first
+  try {
+    const raw = await redis.get(`botconfig:${botId}`);
+    if (raw) {
+      const config = JSON.parse(raw) as BotConfig;
+      memCache.set(botId, config); // keep in-memory in sync
+      return config;
+    }
+  } catch (err) {
+    console.warn("[registry] Redis get failed, using memCache:", (err as Error).message);
+  }
+  // 2. Fallback to in-memory
+  return memCache.get(botId) ?? null;
 }
 
 export async function saveBotConfig(config: BotConfig): Promise<void> {
-  await redis.set(`botconfig:${config.botId}`, JSON.stringify(config));
+  // 1. Always write to in-memory immediately
+  memCache.set(config.botId, config);
+  // 2. Try Redis (non-blocking on failure)
+  try {
+    await redis.set(`botconfig:${config.botId}`, JSON.stringify(config));
+    console.log(`[registry] saved botId=${config.botId} to Redis + memCache`);
+  } catch (err) {
+    console.warn(`[registry] Redis set failed for botId=${config.botId}, memCache only:`, (err as Error).message);
+  }
 }
 
 // ─── Example: register a demo bot (call this once during setup) ───────────────
