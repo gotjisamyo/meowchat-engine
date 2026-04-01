@@ -156,7 +156,15 @@ async function handleMessage(
     `tokens≈${tokenEstimate} model=${payload.model}`
   );
 
-  // 7. Call Claude
+  // 7. Check if bot is locked (trial expired, no payment)
+  if (config.botLocked) {
+    return {
+      reply: `ขออภัยนะคะ 🐱 บริการชั่วคราวหยุดทำงาน\nเจ้าของร้านสามารถต่ออายุได้ที่ my.meowchat.store`,
+      escalated: false,
+    };
+  }
+
+  // 8. Call Gemini
   let reply: string;
   try {
     reply = await callGemini(payload, config.geminiApiKey);
@@ -165,7 +173,12 @@ async function handleMessage(
     reply = `ขออภัยนะคะ ระบบขัดข้องชั่วคราว กรุณาลองใหม่อีกครั้งค่ะ`;
   }
 
-  // 8. Add bot reply to buffer
+  // 9. Append MeowChat branding (on trial/free plans, or when explicitly enabled)
+  if (config.showBranding !== false && config.subscriptionStatus !== "active") {
+    reply += `\n\n🐱 ขับเคลื่อนโดย MeowChat`;
+  }
+
+  // 10. Add bot reply to buffer
   await addTurn(profile, "assistant", reply);
 
   // 9. Passive preference extraction (simple heuristic, non-blocking)

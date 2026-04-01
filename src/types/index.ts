@@ -17,6 +17,9 @@ export interface BotConfig {
   geminiApiKey: string;
   model: "gemini-2.0-flash" | "gemini-2.5-pro"; // routing
   knowledgeBase: KBEntry[];  // product/menu/price list
+  showBranding?: boolean;    // append MeowChat footer (default true on trial/free)
+  botLocked?: boolean;       // trial expired + no payment → lock bot
+  subscriptionStatus?: "trial" | "active" | "expired" | "grace";
 }
 
 export interface KBEntry {
