@@ -22,6 +22,10 @@ export async function getBotConfig(botId: string): Promise<BotConfig | null> {
   return memCache.get(botId) ?? null;
 }
 
+export function listBotIds(): string[] {
+  return Array.from(memCache.keys());
+}
+
 export async function saveBotConfig(config: BotConfig): Promise<void> {
   // 1. Always write to in-memory immediately
   memCache.set(config.botId, config);
