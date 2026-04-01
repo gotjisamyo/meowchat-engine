@@ -84,20 +84,47 @@ export async function lineWebhookHandler(c: Context): Promise<Response> {
 
 // ─── Process a single LINE event ─────────────────────────────────────────────
 
+// Map non-text LINE message types to a natural Thai prompt for the LLM
+function nonTextToPrompt(msgType: string): string | null {
+  switch (msgType) {
+    case "image":
+      return "ลูกค้าส่งรูปภาพมา (ระบบยังไม่รองรับการอ่านรูป) — ตอบอย่างเป็นมิตรว่าเห็นรูปแล้ว ขอให้ลูกค้าพิมพ์อธิบายเพิ่มเติมได้เลย";
+    case "sticker":
+      return "ลูกค้าส่ง sticker มา — ทักทายตอบกลับอย่างเป็นมิตรสั้นๆ";
+    case "audio":
+    case "video":
+      return `ลูกค้าส่ง${msgType === "audio" ? "เสียง" : "วิดีโอ"}มา — แจ้งอย่างสุภาพว่ายังไม่รองรับ${msgType === "audio" ? "เสียง" : "วิดีโอ"} ขอให้พิมพ์แทน`;
+    case "location":
+      return "ลูกค้าส่งตำแหน่งที่อยู่มา — ตอบอย่างเป็นมิตรว่าได้รับตำแหน่งแล้ว และถามว่าต้องการให้ช่วยอะไร";
+    case "file":
+      return "ลูกค้าส่งไฟล์มา — แจ้งว่าได้รับไฟล์แล้ว ขอให้พิมพ์อธิบายว่าต้องการอะไร";
+    default:
+      return null;
+  }
+}
+
 async function processLineEvent(
   event: Record<string, unknown>,
   config: BotConfig
 ): Promise<void> {
-  // Only handle text messages
   if (event.type !== "message") return;
   const msg = event.message as Record<string, unknown>;
-  if (msg?.type !== "text") return;
 
   const userId = (event.source as Record<string, string>)?.userId;
   const replyToken = event.replyToken as string;
-  const userText = (msg.text as string).trim();
+  if (!userId || !replyToken) return;
 
-  if (!userId || !replyToken || !userText) return;
+  let userText: string;
+
+  if (msg?.type === "text") {
+    userText = ((msg.text as string) ?? "").trim();
+    if (!userText) return;
+  } else {
+    // Non-text message — convert to a descriptive prompt so the LLM can respond naturally
+    const syntheticPrompt = nonTextToPrompt(msg?.type as string);
+    if (!syntheticPrompt) return; // unknown type — skip silently
+    userText = syntheticPrompt;
+  }
 
   const webhookEvent: LineWebhookEvent = {
     botId: config.botId,
