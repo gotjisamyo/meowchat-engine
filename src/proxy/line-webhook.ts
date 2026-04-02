@@ -170,10 +170,8 @@ async function handleMessage(
     return { reply: buildEscalationMessage(config.botName), escalated: true };
   }
 
-  // 4. Add user turn to buffer
-  await addTurn(profile, "user", event.text);
-
-  // 5. Assemble context (system prompt + window + profile + KB)
+  // 4. Assemble context BEFORE adding current turn — window must not include
+  //    the current user message (assembleContext appends it itself)
   const payload = assembleContext(config, profile, event.text);
 
   // 6. Log token estimate
@@ -200,15 +198,16 @@ async function handleMessage(
     reply = `ขออภัยนะคะ ระบบขัดข้องชั่วคราว กรุณาลองใหม่อีกครั้งค่ะ`;
   }
 
-  // 9. Append MeowChat branding (on trial/free plans, or when explicitly enabled)
+  // 9. Add both turns to buffer (without branding — keeps history clean for LLM)
+  await addTurn(profile, "user", event.text);
+  await addTurn(profile, "assistant", reply);
+
+  // 10. Append MeowChat branding AFTER buffering (trial/free plans only)
   if (config.showBranding !== false && config.subscriptionStatus !== "active") {
     reply += `\n\n🐱 ขับเคลื่อนโดย MeowChat`;
   }
 
-  // 10. Add bot reply to buffer
-  await addTurn(profile, "assistant", reply);
-
-  // 9. Passive preference extraction (simple heuristic, non-blocking)
+  // 11. Passive preference extraction (simple heuristic, non-blocking)
   extractPreferences(event.text, profile);
   await saveProfile(profile);
 

@@ -51,7 +51,10 @@ export async function addTurn(
 export function getWindow(
   profile: CustomerProfile
 ): Array<{ role: MessageRole; content: string }> {
-  return profile.session.window.map(({ role, content }) => ({ role, content }));
+  const msgs = profile.session.window.map(({ role, content }) => ({ role, content }));
+  // Gemini requires history to start with "user" — trim any leading assistant turns
+  const firstUserIdx = msgs.findIndex((m) => m.role === "user");
+  return firstUserIdx <= 0 ? msgs : msgs.slice(firstUserIdx);
 }
 
 // ─── Check if session is idle (>30 min since last turn) ──────────────────────
