@@ -99,12 +99,17 @@ export async function registerDemoBot(): Promise<void> {
 // ─── Register MeowChat Platform bot (own LINE OA for sales) ──────────────────
 
 export async function registerPlatformBot(): Promise<void> {
-  const secret = process.env.PLATFORM_LINE_CHANNEL_SECRET;
-  const token = process.env.PLATFORM_LINE_CHANNEL_ACCESS_TOKEN;
+  // PLATFORM_* takes priority; falls back to LINE_CHANNEL_* if not set
+  const secret =
+    process.env.PLATFORM_LINE_CHANNEL_SECRET ??
+    process.env.LINE_CHANNEL_SECRET;
+  const token =
+    process.env.PLATFORM_LINE_CHANNEL_ACCESS_TOKEN ??
+    process.env.LINE_CHANNEL_ACCESS_TOKEN;
   const geminiKey = process.env.GEMINI_API_KEY ?? "";
 
   if (!secret || !token) {
-    console.log("[registry] PLATFORM_LINE_CHANNEL_SECRET/TOKEN not set — skipping platform bot");
+    console.log("[registry] LINE_CHANNEL_SECRET/TOKEN not set — skipping platform bot");
     return;
   }
 
