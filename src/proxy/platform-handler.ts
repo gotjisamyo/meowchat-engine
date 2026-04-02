@@ -11,7 +11,6 @@ import {
   getCTAMessage,
   WELCOME_MESSAGE,
   WELCOME_QUICK_REPLIES,
-  STATS_MESSAGE,
 } from "../engine/platform-demo.js";
 
 const STATE_TTL = 60 * 60 * 24 * 30; // 30 days
@@ -66,6 +65,118 @@ async function sendReply(payload: object, accessToken: string): Promise<void> {
   });
 }
 
+// ─── Static responses for rich menu buttons ───────────────────────────────────
+
+const PRICING_MESSAGE = `💰 ราคาแผน MeowChat
+
+🐱 Starter — ฿199/เดือน
+• ข้อความ 500 ครั้ง/เดือน
+• AI ตอบคำถามอัตโนมัติ
+• เหมาะสำหรับธุรกิจเริ่มต้น
+
+🚀 Pro — ฿490/เดือน
+• ข้อความ 2,000 ครั้ง/เดือน
+• ตรวจสลิปอัตโนมัติ
+• Broadcast ส่งหาลูกค้าทุกคน
+• Quick Reply ปุ่มตอบเร็ว
+
+⭐ Pro+ — ฿990/เดือน
+• ข้อความ 10,000 ครั้ง/เดือน
+• ทุกฟีเจอร์ใน Pro
+• Priority Support
+
+🏢 Enterprise — ฿3,990/เดือน
+• ข้อความไม่จำกัด
+• Custom AI Training
+• Dedicated Support 24/7
+
+✅ ทุกแผน: ทดลองฟรี 14 วัน ไม่ต้องใส่บัตรเครดิต
+✅ ยกเลิกได้ทุกเมื่อ ไม่มีสัญญาผูกมัด`;
+
+const ABOUT_MESSAGE = `🐱 MeowChat คืออะไร?
+
+MeowChat คือระบบ AI Chatbot สำหรับ LINE OA ของธุรกิจไทย ที่ช่วยตอบลูกค้าแทนคุณได้ตลอด 24 ชั่วโมง โดยไม่ต้องจ้างพนักงานมานั่งตอบแชท
+
+🔥 ฟีเจอร์หลัก:
+• ตอบคำถามลูกค้าอัตโนมัติ — AI เรียนรู้จากข้อมูลร้านคุณ
+• ตรวจสลิปโอนเงิน — อ่านสลิปแล้วยืนยันออเดอร์ได้ทันที
+• Broadcast — ส่งโปรโมชั่นหาลูกค้าทุกคนในคลิกเดียว
+• Quick Reply — ปุ่มคำตอบด่วนให้ลูกค้ากด สะดวก ไม่ต้องพิมพ์
+• ความจำลูกค้า — จำประวัติการสั่ง บุคลิก และความชอบของแต่ละคน
+
+💡 เหมาะกับ: ร้านอาหาร, ร้านออนไลน์, คลินิก, ร้านความงาม และธุรกิจบริการทุกประเภท
+
+⚡ ตั้งค่าง่าย ไม่ต้องมีความรู้ด้าน IT — ทีมงานช่วย setup ให้ฟรี`;
+
+const REVIEW_MESSAGE = `⭐ เสียงจากลูกค้า MeowChat
+
+━━━━━━━━━━━━━━━━━━━━━━
+🍜 คุณแป้ง — เจ้าของร้านอาหาร (กรุงเทพฯ)
+⭐⭐⭐⭐⭐
+"ก่อนใช้ MeowChat ต้องนั่งตอบแชทเองทุกวัน ตอนนี้บอทจัดการให้หมดเลย ลูกค้าถามเรื่องเมนู จองโต๊ะ เดลิเวอรี บอทตอบได้ครบ ยอดขายเพิ่มขึ้น 35% ในเดือนแรก"
+
+━━━━━━━━━━━━━━━━━━━━━━
+👗 คุณมิ้น — ร้านเสื้อผ้าออนไลน์ (เชียงใหม่)
+⭐⭐⭐⭐⭐
+"ลูกค้าถามเรื่อง size และราคาตลอด ตอนนี้บอทตอบแทนได้หมด ประหยัดเวลาไปได้ 4–5 ชั่วโมงต่อวัน เอาเวลาไปจัดสต็อกแทนดีกว่า"
+
+━━━━━━━━━━━━━━━━━━━━━━
+💆 ดร. พลอย — คลินิกความงาม (นนทบุรี)
+⭐⭐⭐⭐⭐
+"ระบบตรวจสลิปดีมากค่ะ ก่อนหน้านี้ต้องเช็คเองทีละอัน ตอนนี้บอทยืนยันการโอนให้อัตโนมัติ คนไข้ก็ประทับใจที่ได้รับการยืนยันเร็ว"
+
+━━━━━━━━━━━━━━━━━━━━━━
+มากกว่า 200 ร้านค้าทั่วไทยใช้ MeowChat แล้ว 🏆`;
+
+const CONTACT_MESSAGE = `📞 คุยกับทีมงาน MeowChat
+
+สวัสดีค่ะ! ยินดีให้คำปรึกษาฟรีทุกวัน 😊
+
+💬 ช่องทางติดต่อ:
+• LINE Official: @meowchat
+• Email: hello@meowchat.store
+• เว็บไซต์: meowchat.store
+
+⏰ เวลาทำการ: จันทร์–ศุกร์ 9:00–18:00 น.
+
+📲 หรือฝากเบอร์โทรไว้ได้เลยนะคะ ทีมงานจะโทรกลับภายใน 1 ชั่วโมง (ในเวลาทำการ) เพื่อช่วยแนะนำและ setup ให้ฟรีค่ะ
+
+ไม่มีข้อผูกมัด ปรึกษาฟรี 100% ค่ะ 🐱`;
+
+// ─── Gemini system prompt ─────────────────────────────────────────────────────
+
+const MEOWCHAT_SYSTEM_PROMPT = `คุณคือ "น้องแมว" — AI Sales Assistant ของ MeowChat บริการ AI Chatbot LINE OA สำหรับธุรกิจไทย
+
+=== ข้อมูล MeowChat ===
+- บริการ: ระบบ AI Chatbot สำหรับ LINE Official Account ของธุรกิจไทย
+- จุดเด่น: ตอบลูกค้าอัตโนมัติ 24 ชั่วโมง ไม่ต้องจ้างคนนั่งตอบแชท
+
+ฟีเจอร์หลัก:
+1. AI ตอบคำถาม — เรียนรู้จากข้อมูลร้านค้า ตอบได้ทุกคำถาม
+2. ตรวจสลิป — อ่านและยืนยันการโอนเงินอัตโนมัติ
+3. Broadcast — ส่งข้อความหาลูกค้าทุกคนพร้อมกัน
+4. Quick Reply — ปุ่มคำตอบด่วน
+5. ความจำลูกค้า — จำประวัติและความชอบของแต่ละคน
+
+ราคา:
+- Starter: ฿199/เดือน (500 ข้อความ)
+- Pro: ฿490/เดือน (2,000 ข้อความ) — มีตรวจสลิป+Broadcast
+- Pro+: ฿990/เดือน (10,000 ข้อความ)
+- Enterprise: ฿3,990/เดือน (ไม่จำกัด)
+- ทดลองฟรี 14 วัน ทุกแผน ไม่ต้องใส่บัตรเครดิต
+
+สมัคร: my.meowchat.store/register
+ติดต่อ: hello@meowchat.store / LINE: @meowchat
+
+=== วิธีตอบ ===
+- ตอบเป็นภาษาไทย สุภาพ เป็นกันเอง เหมือนพนักงาน Sales มืออาชีพ
+- ตอบตรงประเด็น ให้รายละเอียดที่เป็นประโยชน์ ไม่สั้นเกินไป
+- ใช้ emoji พอประมาณ ไม่มากเกินไป
+- ถ้าถามเรื่องราคา ให้บอกราคาชัดเจน
+- ถ้าถามเรื่องฟีเจอร์ ให้อธิบายว่าทำอะไรได้บ้าง
+- ปิดท้ายด้วยการชวนทดลองใช้ฟรีเสมอ แต่ไม่ต้องกดดัน
+- ห้ามพูดเรื่องที่ไม่เกี่ยวกับ MeowChat หรือตอบคำถามทั่วไป`;
+
 // ─── Main platform event handler ─────────────────────────────────────────────
 
 export async function processPlatformEvent(
@@ -81,20 +192,66 @@ export async function processPlatformEvent(
   if (!userId || !replyToken) return;
 
   const text = ((msg.text as string) ?? "").trim();
-  const lowerText = text.toLowerCase();
+  const t = text.toLowerCase();
   const token = config.lineChannelAccessToken;
 
-  // Load user state
   let state = await getState(userId);
 
-  // ── Commands available anytime ────────────────────────────────────────────
-  if (lowerText === "ราคา" || lowerText.includes("ราคา") || lowerText.includes("แผน")) {
-    await sendReply(buildReply(replyToken, STATS_MESSAGE), token);
+  // ── Rich menu buttons — highest priority, always respond correctly ──────────
+
+  if (t === "ราคา" || t === "ราคาและแผน" || t === "ราคา / แผน") {
+    await sendReply(
+      buildReply(replyToken, PRICING_MESSAGE, [
+        { label: "🚀 ทดลองฟรี 14 วัน", text: "ทดลองฟรี" },
+        { label: "🎮 ดูตัวอย่าง", text: "ดูตัวอย่าง" },
+        { label: "📞 คุยกับทีม", text: "ติดต่อทีม" },
+      ]),
+      token
+    );
     return;
   }
 
-  if (lowerText === "สมัคร" || lowerText.includes("สมัคร") || lowerText.includes("ทดลอง")) {
-    const reply = `ยินดีมากเลยค่ะ! 🎉\n\nสมัครทดลองใช้ฟรี 14 วันได้เลยที่:\n👉 https://my.meowchat.store/register\n\nหรือฝากเบอร์โทรไว้ได้เลยค่ะ ทีมงานจะโทรกลับช่วยตั้งค่าให้ภายใน 1 ชั่วโมงค่ะ 😊`;
+  if (t === "เหมียวแชทคืออะไร" || t === "meowchat คืออะไร" || t === "คืออะไร") {
+    await sendReply(
+      buildReply(replyToken, ABOUT_MESSAGE, [
+        { label: "🎮 ดูตัวอย่าง", text: "ดูตัวอย่าง" },
+        { label: "💰 ดูราคา", text: "ราคา" },
+        { label: "🚀 ทดลองฟรี", text: "ทดลองฟรี" },
+      ]),
+      token
+    );
+    return;
+  }
+
+  if (t === "รีวิวจากลูกค้า" || t === "รีวิว") {
+    await sendReply(
+      buildReply(replyToken, REVIEW_MESSAGE, [
+        { label: "🚀 ทดลองฟรีเลย!", text: "ทดลองฟรี" },
+        { label: "💰 ดูราคา", text: "ราคา" },
+      ]),
+      token
+    );
+    return;
+  }
+
+  if (t === "ติดต่อทีม" || t === "คุยกับทีมงาน") {
+    await sendReply(
+      buildReply(replyToken, CONTACT_MESSAGE, [
+        { label: "🚀 ทดลองฟรี 14 วัน", text: "ทดลองฟรี" },
+        { label: "💰 ดูราคา", text: "ราคา" },
+      ]),
+      token
+    );
+    return;
+  }
+
+  if (t === "ทดลองฟรี" || t === "ทดลองฟรีสิบสี่วัน" || t === "สมัคร") {
+    const reply =
+      `ยินดีมากเลยค่ะ! 🎉\n\n` +
+      `สมัครทดลองใช้ฟรี 14 วันได้เลยที่:\n` +
+      `👉 https://my.meowchat.store/register\n\n` +
+      `ไม่ต้องใส่บัตรเครดิต ยกเลิกได้ทุกเมื่อ\n\n` +
+      `หรือฝากเบอร์โทรไว้ได้เลยค่ะ ทีมงานจะโทรกลับภายใน 1 ชั่วโมงเพื่อช่วย setup ให้ฟรีค่ะ 😊`;
     await sendReply(buildReply(replyToken, reply), token);
     if (state) {
       state.stage = "registered";
@@ -103,7 +260,37 @@ export async function processPlatformEvent(
     return;
   }
 
-  // ── New user / no state ────────────────────────────────────────────────────
+  if (t === "ดูตัวอย่าง" || t.includes("demo")) {
+    // Show demo based on known business type, or ask first
+    const bizType = state?.businessType ?? null;
+    if (bizType) {
+      await sendReply(
+        buildReply(replyToken, getDemoMessage(bizType), [
+          { label: "🚀 สมัครเลย!", text: "ทดลองฟรี" },
+          { label: "💰 ดูราคา", text: "ราคา" },
+        ]),
+        token
+      );
+    } else {
+      // Ask business type first
+      const now = new Date().toISOString();
+      state = state ?? { stage: "asked_type", firstSeenAt: now, lastMessageAt: now };
+      state.stage = "asked_type";
+      await setState(userId, state);
+      await sendReply(
+        buildReply(
+          replyToken,
+          `ขอถามก่อนนะคะ เพื่อให้ดูตัวอย่างที่ตรงกับธุรกิจของคุณ 😊\n\nร้านหรือธุรกิจของคุณเป็นประเภทไหนคะ?`,
+          WELCOME_QUICK_REPLIES
+        ),
+        token
+      );
+    }
+    return;
+  }
+
+  // ── New user ───────────────────────────────────────────────────────────────
+
   if (!state || state.stage === "new") {
     const now = new Date().toISOString();
     state = { stage: "asked_type", firstSeenAt: now, lastMessageAt: now };
@@ -116,6 +303,7 @@ export async function processPlatformEvent(
   }
 
   // ── Waiting for business type ─────────────────────────────────────────────
+
   if (state.stage === "asked_type") {
     const bizType = detectBusinessType(text);
     const resolvedType: BusinessType = bizType ?? "other";
@@ -123,10 +311,9 @@ export async function processPlatformEvent(
     state.stage = "demo_shown";
     await setState(userId, state);
 
-    const demoMsg = getDemoMessage(resolvedType);
     await sendReply(
-      buildReply(replyToken, demoMsg, [
-        { label: "🚀 อยากมีบอทแบบนี้!", text: "สมัคร" },
+      buildReply(replyToken, getDemoMessage(resolvedType), [
+        { label: "🚀 อยากมีบอทแบบนี้!", text: "ทดลองฟรี" },
         { label: "💰 ดูราคา", text: "ราคา" },
         { label: "❓ ถามเพิ่มเติม", text: "ถามเพิ่มเติม" },
       ]),
@@ -135,102 +322,39 @@ export async function processPlatformEvent(
     return;
   }
 
-  // ── After demo shown ──────────────────────────────────────────────────────
+  // ── After demo ────────────────────────────────────────────────────────────
+
   if (state.stage === "demo_shown") {
     const bizType = state.businessType ?? "other";
     state.stage = "cta_sent";
     await setState(userId, state);
     await sendReply(
       buildReply(replyToken, getCTAMessage(bizType), [
-        { label: "✅ สมัครเลย!", text: "สมัคร" },
-        { label: "🔄 ดู demo อีกครั้ง", text: "ดูตัวอย่าง" },
-      ]),
-      token
-    );
-    return;
-  }
-
-  // ── CTA sent / return user ────────────────────────────────────────────────
-  if (lowerText.includes("ดูตัวอย่าง") || lowerText.includes("demo")) {
-    const bizType = state.businessType ?? "other";
-    state.stage = "demo_shown";
-    await setState(userId, state);
-    await sendReply(
-      buildReply(replyToken, getDemoMessage(bizType), [
-        { label: "🚀 สมัครเลย!", text: "สมัคร" },
+        { label: "✅ สมัครเลย!", text: "ทดลองฟรี" },
         { label: "💰 ดูราคา", text: "ราคา" },
+        { label: "📞 คุยกับทีม", text: "ติดต่อทีม" },
       ]),
       token
     );
     return;
   }
 
-  // ── Rich menu: About ──────────────────────────────────────────────────────
-  if (
-    lowerText.includes("คืออะไร") ||
-    lowerText.includes("meowchat คือ") ||
-    lowerText.includes("คืออะไร")
-  ) {
-    const aboutMsg = `🐱 MeowChat คืออะไร?\n\nMeowChat คือระบบ AI Chatbot สำหรับ LINE OA ของธุรกิจไทย\nให้บอทตอบลูกค้าแทนคุณได้ 24 ชั่วโมง!\n\n✅ ตอบคำถาม → อัตโนมัติ ไม่ต้องจ้างพนักงาน\n✅ ตรวจสลิป → บอทอ่านสลิปให้อัตโนมัติ\n✅ Broadcast → ยิงข้อความหาลูกค้าทุกคนได้\n✅ Quick Reply → ปุ่มตอบเร็วสำหรับลูกค้า\n\nเริ่มต้นแค่ ฿199/เดือน 🎉`;
-    await sendReply(
-      buildReply(replyToken, aboutMsg, [
-        { label: "🎮 ดูตัวอย่าง", text: "ดูตัวอย่าง" },
-        { label: "💰 ดูราคา", text: "ราคา" },
-        { label: "🚀 ทดลองฟรี", text: "สมัคร" },
-      ]),
-      token
-    );
-    return;
-  }
+  // ── Fallback: Gemini with detailed MeowChat knowledge ─────────────────────
 
-  // ── Rich menu: Contact team ───────────────────────────────────────────────
-  if (
-    lowerText.includes("ติดต่อทีม") ||
-    lowerText.includes("คุยกับทีม") ||
-    lowerText.includes("ติดต่อ")
-  ) {
-    const contactMsg = `📞 ติดต่อทีม MeowChat\n\nยินดีให้คำปรึกษาฟรีค่ะ!\n\n💬 LINE: @meowchat (Official)\n📧 Email: hello@meowchat.store\n🌐 Web: meowchat.store\n\nหรือฝากเบอร์โทรไว้ได้เลย ทีมงานจะโทรกลับภายใน 1 ชั่วโมง (จ-ศ 9:00–18:00) 😊`;
-    await sendReply(
-      buildReply(replyToken, contactMsg, [
-        { label: "🚀 ทดลองฟรี 14 วัน", text: "สมัคร" },
-        { label: "💰 ดูราคา", text: "ราคา" },
-      ]),
-      token
-    );
-    return;
-  }
-
-  // ── Rich menu: Reviews ────────────────────────────────────────────────────
-  if (lowerText.includes("รีวิว") || lowerText.includes("review")) {
-    const reviewMsg = `🏆 เสียงจากลูกค้า MeowChat\n\n⭐⭐⭐⭐⭐ ร้านอาหาร (กรุงเทพฯ)\n"บอทตอบลูกค้าเรื่องเมนูและโต๊ะ 24 ชม. ลดภาระพนักงานไปได้มาก ลูกค้าก็ไม่ต้องรอ"\n\n⭐⭐⭐⭐⭐ คลินิกความงาม\n"ระบบตรวจสลิปช่วยได้มากค่ะ ก่อนหน้านี้ต้องเช็คเองทุกอัน ตอนนี้บอททำแทนได้เลย"\n\n⭐⭐⭐⭐⭐ ร้านออนไลน์\n"Broadcast ช่วยยิงโปรหาลูกค้าเก่าได้เยอะมาก ยอดขายเพิ่มทันที"\n\n👉 ลองฟรี 14 วัน ไม่ต้องใส่บัตรเครดิต!`;
-    await sendReply(
-      buildReply(replyToken, reviewMsg, [
-        { label: "🚀 ทดลองฟรีเลย!", text: "สมัคร" },
-        { label: "💰 ดูราคา", text: "ราคา" },
-      ]),
-      token
-    );
-    return;
-  }
-
-  // ── Fallback: Gemini answers questions about MeowChat ─────────────────────
-  // For general questions, use Gemini with a MeowChat sales system prompt
   const { GoogleGenerativeAI } = await import("@google/generative-ai");
   const genAI = new GoogleGenerativeAI(config.geminiApiKey);
   const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
-  const systemContext = `คุณคือน้องแมว บอทของ MeowChat — บริการ AI Chatbot LINE OA สำหรับธุรกิจไทย
-ราคาเริ่มต้น ฿199/เดือน ทดลองฟรี 14 วัน ไม่ต้องใส่บัตรเครดิต
-สมัครที่ my.meowchat.store/register
-ตอบสั้น เป็นมิตร ใช้ emoji บ้าง ภาษาไทย พยายามโน้มน้าวให้ลูกค้าสมัครทดลองใช้`;
-
   try {
-    const result = await model.generateContent(`${systemContext}\n\nลูกค้าถาม: ${text}`);
+    const result = await model.generateContent(
+      `${MEOWCHAT_SYSTEM_PROMPT}\n\n=== ลูกค้าถาม ===\n${text}`
+    );
     const reply = result.response.text().trim();
     await sendReply(
       buildReply(replyToken, reply, [
-        { label: "🚀 ทดลองฟรี 14 วัน", text: "สมัคร" },
+        { label: "🚀 ทดลองฟรี 14 วัน", text: "ทดลองฟรี" },
         { label: "💰 ดูราคา", text: "ราคา" },
+        { label: "📞 คุยกับทีม", text: "ติดต่อทีม" },
       ]),
       token
     );
@@ -238,7 +362,8 @@ export async function processPlatformEvent(
     await sendReply(
       buildReply(
         replyToken,
-        "ขอโทษค่ะ มีปัญหาชั่วคราว พิมพ์ 'สมัคร' เพื่อทดลองฟรีได้เลยค่ะ 🐱"
+        "ขอโทษค่ะ ระบบมีปัญหาชั่วคราว กรุณาลองใหม่อีกครั้ง หรือติดต่อทีมงานได้เลยที่ LINE: @meowchat ค่ะ 🐱",
+        [{ label: "📞 ติดต่อทีม", text: "ติดต่อทีม" }]
       ),
       token
     );
