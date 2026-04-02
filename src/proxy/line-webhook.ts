@@ -34,8 +34,24 @@ function verifyLineSignature(
 async function replyToLine(
   replyToken: string,
   message: string,
-  accessToken: string
+  accessToken: string,
+  quickReplies?: Array<{ label: string; text: string }>
 ): Promise<void> {
+  const textMessage: Record<string, unknown> = { type: "text", text: message };
+
+  if (quickReplies && quickReplies.length > 0) {
+    textMessage.quickReply = {
+      items: quickReplies.slice(0, 13).map((qr) => ({
+        type: "action",
+        action: {
+          type: "message",
+          label: qr.label,
+          text: qr.text,
+        },
+      })),
+    };
+  }
+
   await fetch("https://api.line.me/v2/bot/message/reply", {
     method: "POST",
     headers: {
@@ -44,7 +60,7 @@ async function replyToLine(
     },
     body: JSON.stringify({
       replyToken,
-      messages: [{ type: "text", text: message }],
+      messages: [textMessage],
     }),
   });
 }
@@ -225,7 +241,8 @@ async function processLineEvent(
   };
 
   const { reply, escalated } = await handleMessage(webhookEvent, config);
-  await replyToLine(replyToken, reply, config.lineChannelAccessToken);
+  const qr = !escalated && config.quickReplies?.length ? config.quickReplies : undefined;
+  await replyToLine(replyToken, reply, config.lineChannelAccessToken, qr);
 
   // Fire-and-forget: log conversation to backend for merchant dashboard
   logConversationToBackend(config.botId, userId, userText, reply, escalated).catch(

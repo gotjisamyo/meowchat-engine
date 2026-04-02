@@ -21,6 +21,7 @@ export interface BotConfig {
   botLocked?: boolean;       // trial expired + no payment → lock bot
   subscriptionStatus?: "trial" | "active" | "expired" | "grace";
   slipVerifyMode?: "off" | "auto" | "manual"; // payment slip detection via Gemini Vision
+  quickReplies?: Array<{ label: string; text: string }>; // LINE quick reply buttons
 }
 
 export interface KBEntry {
