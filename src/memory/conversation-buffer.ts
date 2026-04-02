@@ -4,7 +4,7 @@ import { summarizeMemory } from "./summarizer.js";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
-const WINDOW_SIZE = 6; // raw turns kept in context
+const WINDOW_SIZE = 4; // raw turns kept in context (2 exchanges)
 
 // ─── Add a turn to the sliding window ────────────────────────────────────────
 // When the window is full, the oldest turn is evicted and folded into memory_summary
@@ -31,7 +31,7 @@ export async function addTurn(
   if (session.window.length > WINDOW_SIZE) {
     const evicted = session.window.shift()!;
 
-    // Fold evicted turn into rolling summary (async, non-blocking)
+    // Fold evicted turn into rolling summary + persist (async, non-blocking)
     summarizeMemory(session.memorySummary, evicted)
       .then((newSummary) => {
         session.memorySummary = newSummary;
@@ -40,10 +40,8 @@ export async function addTurn(
       .catch((err) =>
         console.error("[buffer] summarizer error:", err.message)
       );
-  } else {
-    // Still within window — just persist
-    await saveProfile(profile);
   }
+  // Skip per-turn Redis write — profile is saved once per request in handleMessage
 }
 
 // ─── Get current window for context assembly ──────────────────────────────────
