@@ -165,6 +165,54 @@ export async function processPlatformEvent(
     return;
   }
 
+  // ── Rich menu: About ──────────────────────────────────────────────────────
+  if (
+    lowerText.includes("คืออะไร") ||
+    lowerText.includes("meowchat คือ") ||
+    lowerText.includes("คืออะไร")
+  ) {
+    const aboutMsg = `🐱 MeowChat คืออะไร?\n\nMeowChat คือระบบ AI Chatbot สำหรับ LINE OA ของธุรกิจไทย\nให้บอทตอบลูกค้าแทนคุณได้ 24 ชั่วโมง!\n\n✅ ตอบคำถาม → อัตโนมัติ ไม่ต้องจ้างพนักงาน\n✅ ตรวจสลิป → บอทอ่านสลิปให้อัตโนมัติ\n✅ Broadcast → ยิงข้อความหาลูกค้าทุกคนได้\n✅ Quick Reply → ปุ่มตอบเร็วสำหรับลูกค้า\n\nเริ่มต้นแค่ ฿199/เดือน 🎉`;
+    await sendReply(
+      buildReply(replyToken, aboutMsg, [
+        { label: "🎮 ดูตัวอย่าง", text: "ดูตัวอย่าง" },
+        { label: "💰 ดูราคา", text: "ราคา" },
+        { label: "🚀 ทดลองฟรี", text: "สมัคร" },
+      ]),
+      token
+    );
+    return;
+  }
+
+  // ── Rich menu: Contact team ───────────────────────────────────────────────
+  if (
+    lowerText.includes("ติดต่อทีม") ||
+    lowerText.includes("คุยกับทีม") ||
+    lowerText.includes("ติดต่อ")
+  ) {
+    const contactMsg = `📞 ติดต่อทีม MeowChat\n\nยินดีให้คำปรึกษาฟรีค่ะ!\n\n💬 LINE: @meowchat (Official)\n📧 Email: hello@meowchat.store\n🌐 Web: meowchat.store\n\nหรือฝากเบอร์โทรไว้ได้เลย ทีมงานจะโทรกลับภายใน 1 ชั่วโมง (จ-ศ 9:00–18:00) 😊`;
+    await sendReply(
+      buildReply(replyToken, contactMsg, [
+        { label: "🚀 ทดลองฟรี 14 วัน", text: "สมัคร" },
+        { label: "💰 ดูราคา", text: "ราคา" },
+      ]),
+      token
+    );
+    return;
+  }
+
+  // ── Rich menu: Reviews ────────────────────────────────────────────────────
+  if (lowerText.includes("รีวิว") || lowerText.includes("review")) {
+    const reviewMsg = `🏆 เสียงจากลูกค้า MeowChat\n\n⭐⭐⭐⭐⭐ ร้านอาหาร (กรุงเทพฯ)\n"บอทตอบลูกค้าเรื่องเมนูและโต๊ะ 24 ชม. ลดภาระพนักงานไปได้มาก ลูกค้าก็ไม่ต้องรอ"\n\n⭐⭐⭐⭐⭐ คลินิกความงาม\n"ระบบตรวจสลิปช่วยได้มากค่ะ ก่อนหน้านี้ต้องเช็คเองทุกอัน ตอนนี้บอททำแทนได้เลย"\n\n⭐⭐⭐⭐⭐ ร้านออนไลน์\n"Broadcast ช่วยยิงโปรหาลูกค้าเก่าได้เยอะมาก ยอดขายเพิ่มทันที"\n\n👉 ลองฟรี 14 วัน ไม่ต้องใส่บัตรเครดิต!`;
+    await sendReply(
+      buildReply(replyToken, reviewMsg, [
+        { label: "🚀 ทดลองฟรีเลย!", text: "สมัคร" },
+        { label: "💰 ดูราคา", text: "ราคา" },
+      ]),
+      token
+    );
+    return;
+  }
+
   // ── Fallback: Gemini answers questions about MeowChat ─────────────────────
   // For general questions, use Gemini with a MeowChat sales system prompt
   const { GoogleGenerativeAI } = await import("@google/generative-ai");
