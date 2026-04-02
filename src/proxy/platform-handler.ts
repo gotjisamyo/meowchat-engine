@@ -195,6 +195,8 @@ export async function processPlatformEvent(
   const t = text.toLowerCase();
   const token = config.lineChannelAccessToken;
 
+  console.log(`[platform] received: "${text}" from userId=${userId.slice(0, 8)}`);
+
   let state = await getState(userId);
 
   // ── Rich menu buttons — highest priority, always respond correctly ──────────
