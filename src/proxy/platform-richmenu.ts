@@ -5,9 +5,6 @@
 import { spawnSync } from "node:child_process";
 import { readFileSync, unlinkSync, mkdirSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const LINE_DATA_API = "https://api-data.line.me";
 const LINE_API      = "https://api.line.me";
 
