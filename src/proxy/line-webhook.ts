@@ -11,6 +11,7 @@ import { addTurn, isSessionIdle } from "../memory/conversation-buffer.js";
 import { shouldEscalate, buildEscalationMessage } from "../engine/guardrails.js";
 import { assembleContext, estimateTokens } from "../engine/context-assembler.js";
 import { callGemini, analyzeSlipImage } from "../engine/gemini-client.js";
+import { scanSlipQR } from "../engine/qr-scanner.js";
 import { getBotConfig } from "./bot-registry.js";
 
 // ─── Verify LINE signature ────────────────────────────────────────────────────
@@ -179,7 +180,27 @@ async function processLineEvent(
     const imageData = await downloadLineImage(msg.id as string, config.lineChannelAccessToken);
     if (imageData) {
       try {
-        const slip = await analyzeSlipImage(imageData.base64, imageData.mimeType, config.geminiApiKey);
+        // ── 1. Try QR scan first (free, no API cost) ──────────────────────
+        const qrData = await scanSlipQR(imageData.base64);
+        let slip;
+
+        if (qrData && qrData.amount !== null) {
+          // QR scan success — skip Gemini Vision call entirely
+          console.log(`[engine] QR slip: amount=${qrData.amount} ref=${qrData.refNumber}`);
+          slip = {
+            isSlip: true,
+            amount: qrData.amount,
+            date: null,
+            refNumber: qrData.refNumber,
+            bankName: qrData.bankCode,
+            confidence: "high" as const,
+          };
+        } else {
+          // ── 2. Fallback: Gemini Vision (~฿0.005/image) ────────────────────
+          console.log("[engine] no QR found, falling back to Gemini Vision");
+          slip = await analyzeSlipImage(imageData.base64, imageData.mimeType, config.geminiApiKey);
+        }
+
         if (slip.isSlip && slip.confidence !== "low") {
           const mode = config.slipVerifyMode; // "auto" | "manual"
 

@@ -12,7 +12,9 @@
     "@hono/node-server": "^1.19.11",
     "@line/bot-sdk": "^9.3.0",
     "hono": "^4.7.0",
-    "ioredis": "^5.4.2"
+    "ioredis": "^5.4.2",
+    "jimp": "^0.22.12",
+    "jsqr": "^1.4.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
