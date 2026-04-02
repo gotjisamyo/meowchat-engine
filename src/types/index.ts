@@ -20,6 +20,7 @@ export interface BotConfig {
   showBranding?: boolean;    // append MeowChat footer (default true on trial/free)
   botLocked?: boolean;       // trial expired + no payment → lock bot
   subscriptionStatus?: "trial" | "active" | "expired" | "grace";
+  slipVerifyMode?: "off" | "auto" | "manual"; // payment slip detection via Gemini Vision
 }
 
 export interface KBEntry {

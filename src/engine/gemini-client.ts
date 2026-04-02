@@ -6,6 +6,58 @@ import {
 } from "@google/generative-ai";
 import type { LLMPayload } from "../types/index.js";
 
+// ─── Slip analysis result ─────────────────────────────────────────────────────
+
+export interface SlipAnalysis {
+  isSlip: boolean;
+  amount: number | null;
+  date: string | null;
+  refNumber: string | null;
+  bankName: string | null;
+  confidence: "high" | "medium" | "low";
+}
+
+// ─── Analyze slip image with Gemini Vision ────────────────────────────────────
+
+export async function analyzeSlipImage(
+  imageBase64: string,
+  mimeType: string,
+  apiKey: string
+): Promise<SlipAnalysis> {
+  const genAI = new GoogleGenerativeAI(apiKey);
+  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+
+  const prompt = `วิเคราะห์รูปนี้ว่าเป็นสลิปโอนเงินไหม ถ้าใช่ให้ดึงข้อมูลออกมา
+ตอบเป็น JSON เท่านั้น ไม่ต้องมีข้อความอื่น:
+{
+  "isSlip": true/false,
+  "amount": ตัวเลขจำนวนเงิน (หรือ null),
+  "date": "วันที่ในรูปแบบ YYYY-MM-DD" (หรือ null),
+  "refNumber": "เลขอ้างอิง/เลขธุรกรรม" (หรือ null),
+  "bankName": "ชื่อธนาคาร" (หรือ null),
+  "confidence": "high"/"medium"/"low"
+}`;
+
+  try {
+    const result = await model.generateContent([
+      { inlineData: { data: imageBase64, mimeType } },
+      prompt,
+    ]);
+    const text = result.response.text().trim().replace(/```json|```/g, "");
+    const parsed = JSON.parse(text);
+    return {
+      isSlip: !!parsed.isSlip,
+      amount: parsed.amount ?? null,
+      date: parsed.date ?? null,
+      refNumber: parsed.refNumber ?? null,
+      bankName: parsed.bankName ?? null,
+      confidence: parsed.confidence ?? "low",
+    };
+  } catch {
+    return { isSlip: false, amount: null, date: null, refNumber: null, bankName: null, confidence: "low" };
+  }
+}
+
 // ─── Safety settings (relax for business chat, not creative content) ──────────
 
 const SAFETY_SETTINGS = [

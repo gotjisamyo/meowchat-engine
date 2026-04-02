@@ -10,7 +10,7 @@ import {
 import { addTurn, isSessionIdle } from "../memory/conversation-buffer.js";
 import { shouldEscalate, buildEscalationMessage } from "../engine/guardrails.js";
 import { assembleContext, estimateTokens } from "../engine/context-assembler.js";
-import { callGemini } from "../engine/gemini-client.js";
+import { callGemini, analyzeSlipImage } from "../engine/gemini-client.js";
 import { getBotConfig } from "./bot-registry.js";
 
 // ─── Verify LINE signature ────────────────────────────────────────────────────
@@ -103,6 +103,50 @@ function nonTextToPrompt(msgType: string): string | null {
   }
 }
 
+// ─── Download image from LINE Content API ────────────────────────────────────
+
+async function downloadLineImage(
+  messageId: string,
+  accessToken: string
+): Promise<{ base64: string; mimeType: string } | null> {
+  try {
+    const res = await fetch(
+      `https://api-data.line.me/v2/bot/message/${messageId}/content`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+    if (!res.ok) return null;
+    const contentType = res.headers.get("content-type") ?? "image/jpeg";
+    const mimeType = contentType.split(";")[0].trim();
+    const buffer = await res.arrayBuffer();
+    const base64 = Buffer.from(buffer).toString("base64");
+    return { base64, mimeType };
+  } catch {
+    return null;
+  }
+}
+
+// ─── Notify backend to create a slip order ───────────────────────────────────
+
+async function notifySlipOrder(
+  botId: string,
+  lineUserId: string,
+  slipData: { amount: number | null; date: string | null; refNumber: string | null; bankName: string | null },
+  mode: "auto" | "manual"
+): Promise<void> {
+  const backendUrl = process.env.BACKEND_URL;
+  const internalKey = process.env.INTERNAL_API_KEY;
+  if (!backendUrl || !internalKey) return;
+
+  await fetch(`${backendUrl}/api/internal/slip-order`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-internal-key": internalKey,
+    },
+    body: JSON.stringify({ botId, lineUserId, ...slipData, mode }),
+  });
+}
+
 async function processLineEvent(
   event: Record<string, unknown>,
   config: BotConfig
@@ -113,6 +157,52 @@ async function processLineEvent(
   const userId = (event.source as Record<string, string>)?.userId;
   const replyToken = event.replyToken as string;
   if (!userId || !replyToken) return;
+
+  // ─── Handle image messages with slip detection ────────────────────────────
+  if (msg?.type === "image" && config.slipVerifyMode && config.slipVerifyMode !== "off") {
+    const imageData = await downloadLineImage(msg.id as string, config.lineChannelAccessToken);
+    if (imageData) {
+      try {
+        const slip = await analyzeSlipImage(imageData.base64, imageData.mimeType, config.geminiApiKey);
+        if (slip.isSlip && slip.confidence !== "low") {
+          const mode = config.slipVerifyMode; // "auto" | "manual"
+
+          // Notify backend to record slip order
+          notifySlipOrder(config.botId, userId, {
+            amount: slip.amount,
+            date: slip.date,
+            refNumber: slip.refNumber,
+            bankName: slip.bankName,
+          }, mode).catch((e) => console.warn("[engine] slip order notify failed:", e));
+
+          let replyText: string;
+          if (mode === "auto") {
+            const amountText = slip.amount ? `฿${slip.amount.toLocaleString()}` : "ไม่ทราบจำนวน";
+            replyText =
+              `✅ ได้รับสลิปการโอนเงินแล้วค่ะ\n` +
+              `💰 จำนวน: ${amountText}\n` +
+              (slip.bankName ? `🏦 ธนาคาร: ${slip.bankName}\n` : "") +
+              (slip.refNumber ? `📋 เลขอ้างอิง: ${slip.refNumber}\n` : "") +
+              `\n✨ ระบบบันทึกข้อมูลเรียบร้อยแล้ว ทีมงานจะดำเนินการให้ค่ะ ขอบคุณที่ใช้บริการ 🐱`;
+          } else {
+            // manual mode — notify merchant to verify
+            replyText =
+              `📨 ได้รับสลิปแล้วค่ะ กำลังแจ้งทีมงานให้ตรวจสอบ\n` +
+              `⏳ กรุณารอสักครู่ ทีมงานจะยืนยันการโอนเงินให้ค่ะ 🐱`;
+          }
+
+          await replyToLine(replyToken, replyText, config.lineChannelAccessToken);
+          logConversationToBackend(config.botId, userId, "[ส่งสลิปโอนเงิน]", replyText, false).catch(
+            (e) => console.warn("[engine] conversation log failed:", e)
+          );
+          return;
+        }
+      } catch (err) {
+        console.warn("[engine] slip analysis failed:", err);
+        // fall through to generic image handling
+      }
+    }
+  }
 
   let userText: string;
 
