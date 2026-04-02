@@ -3,6 +3,7 @@ import { Hono } from "hono";
 import { redis } from "./memory/redis.js";
 import { lineWebhookHandler } from "./proxy/line-webhook.js";
 import { registerDemoBot, registerPlatformBot } from "./proxy/bot-registry.js";
+import { setupPlatformRichMenu } from "./proxy/platform-richmenu.js";
 import { saveBotConfig, getBotConfig, listBotIds } from "./proxy/bot-registry.js";
 import type { BotConfig } from "./types/index.js";
 
@@ -75,6 +76,12 @@ async function start() {
 
   // Register MeowChat platform bot (own LINE OA for sales funnel)
   await registerPlatformBot();
+
+  // Auto-setup rich menu (idempotent — skips if already configured)
+  const platformToken = process.env.PLATFORM_LINE_CHANNEL_ACCESS_TOKEN;
+  if (platformToken) {
+    setupPlatformRichMenu(platformToken); // fire-and-forget (non-fatal)
+  }
 
   serve({ fetch: app.fetch, port: PORT });
 
