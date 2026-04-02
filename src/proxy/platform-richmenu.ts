@@ -8,35 +8,40 @@ import path from "node:path";
 const LINE_DATA_API = "https://api-data.line.me";
 const LINE_API      = "https://api.line.me";
 
+// Layout matches generate-richmenu-image.py CELLS order:
+// Row 0: เหมียวแชทคืออะไร | ดูตัวอย่าง | รีวิวจากลูกค้า
+// Row 1: ราคาและแผน        | ทดลองฟรี   | คุยกับทีมงาน
 const RICH_MENU = {
-  size: { width: 2500, height: 843 },
+  size: { width: 2500, height: 1686 },
   selected: true,
   name: "MeowChat Platform Menu",
   chatBarText: "เมนู 🐱",
   areas: [
+    // Row 0
     {
-      bounds: { x: 0, y: 0, width: 833, height: 421 },
-      action: { type: "message", label: "ดูตัวอย่าง", text: "ดูตัวอย่าง" },
-    },
-    {
-      bounds: { x: 833, y: 0, width: 834, height: 421 },
-      action: { type: "message", label: "ราคา/แผน", text: "ราคา" },
-    },
-    {
-      bounds: { x: 1667, y: 0, width: 833, height: 421 },
-      action: { type: "uri", label: "ทดลองฟรี", uri: "https://my.meowchat.store/register" },
-    },
-    {
-      bounds: { x: 0, y: 421, width: 833, height: 422 },
+      bounds: { x: 0, y: 0, width: 833, height: 843 },
       action: { type: "message", label: "เหมียวแชทคืออะไร", text: "MeowChat คืออะไร" },
     },
     {
-      bounds: { x: 833, y: 421, width: 834, height: 422 },
-      action: { type: "message", label: "คุยกับทีมงาน", text: "ติดต่อทีม" },
+      bounds: { x: 833, y: 0, width: 834, height: 843 },
+      action: { type: "message", label: "ดูตัวอย่าง", text: "ดูตัวอย่าง" },
     },
     {
-      bounds: { x: 1667, y: 421, width: 833, height: 422 },
+      bounds: { x: 1667, y: 0, width: 833, height: 843 },
       action: { type: "message", label: "รีวิวจากลูกค้า", text: "รีวิว" },
+    },
+    // Row 1
+    {
+      bounds: { x: 0, y: 843, width: 833, height: 843 },
+      action: { type: "message", label: "ราคาและแผน", text: "ราคา" },
+    },
+    {
+      bounds: { x: 833, y: 843, width: 834, height: 843 },
+      action: { type: "uri", label: "ทดลองฟรีสิบสี่วัน", uri: "https://my.meowchat.store/register" },
+    },
+    {
+      bounds: { x: 1667, y: 843, width: 833, height: 843 },
+      action: { type: "message", label: "คุยกับทีมงาน", text: "ติดต่อทีม" },
     },
   ],
 };

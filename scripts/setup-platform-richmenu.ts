@@ -28,48 +28,43 @@ const LINE_API = "https://api.line.me";
 // ─── Rich Menu Structure ──────────────────────────────────────────────────────
 
 const RICH_MENU = {
-  size: { width: 2500, height: 843 },
+  size: { width: 2500, height: 1686 },
   selected: true,
   name: "MeowChat Platform Menu",
   chatBarText: "เมนู 🐱",
+  // Layout matches generate-richmenu-image.py CELLS order:
+  // Row 0: เหมียวแชทคืออะไร | ดูตัวอย่าง | รีวิวจากลูกค้า
+  // Row 1: ราคาและแผน        | ทดลองฟรี   | คุยกับทีมงาน
   areas: [
-    // Row 1
+    // Row 0
     {
-      bounds: { x: 0, y: 0, width: 833, height: 421 },
+      bounds: { x: 0, y: 0, width: 833, height: 843 },
+      action: { type: "message", label: "เหมียวแชทคืออะไร", text: "MeowChat คืออะไร" },
+    },
+    {
+      bounds: { x: 833, y: 0, width: 834, height: 843 },
       action: { type: "message", label: "ดูตัวอย่าง", text: "ดูตัวอย่าง" },
     },
     {
-      bounds: { x: 833, y: 0, width: 834, height: 421 },
-      action: { type: "message", label: "ราคา/แผน", text: "ราคา" },
+      bounds: { x: 1667, y: 0, width: 833, height: 843 },
+      action: { type: "message", label: "รีวิวจากลูกค้า", text: "รีวิว" },
+    },
+    // Row 1
+    {
+      bounds: { x: 0, y: 843, width: 833, height: 843 },
+      action: { type: "message", label: "ราคาและแผน", text: "ราคา" },
     },
     {
-      bounds: { x: 1667, y: 0, width: 833, height: 421 },
+      bounds: { x: 833, y: 843, width: 834, height: 843 },
       action: {
         type: "uri",
-        label: "ทดลองฟรี",
+        label: "ทดลองฟรีสิบสี่วัน",
         uri: "https://my.meowchat.store/register",
       },
     },
-    // Row 2
     {
-      bounds: { x: 0, y: 421, width: 833, height: 422 },
-      action: {
-        type: "message",
-        label: "MeowChat คืออะไร?",
-        text: "MeowChat คืออะไร",
-      },
-    },
-    {
-      bounds: { x: 833, y: 421, width: 834, height: 422 },
-      action: {
-        type: "message",
-        label: "คุยกับทีมงาน",
-        text: "ติดต่อทีม",
-      },
-    },
-    {
-      bounds: { x: 1667, y: 421, width: 833, height: 422 },
-      action: { type: "message", label: "รีวิวจากลูกค้า", text: "รีวิว" },
+      bounds: { x: 1667, y: 843, width: 833, height: 843 },
+      action: { type: "message", label: "คุยกับทีมงาน", text: "ติดต่อทีม" },
     },
   ],
 };
@@ -122,7 +117,7 @@ async function lineApi(
 async function main(): Promise<void> {
   const tmpDir = path.join(__dirname, "../.tmp");
   await mkdir(tmpDir, { recursive: true });
-  const imagePath = path.join(tmpDir, "platform-richmenu.png");
+  const imagePath = path.join(tmpDir, "platform-richmenu.jpg");
 
   // 1. Generate image
   generateImage(imagePath);
@@ -140,7 +135,7 @@ async function main(): Promise<void> {
     method: "POST",
     headers: {
       Authorization: `Bearer ${ACCESS_TOKEN}`,
-      "Content-Type": "image/png",
+      "Content-Type": "image/jpeg",
     },
     body: imageBuffer,
   }).then(async (res) => {
