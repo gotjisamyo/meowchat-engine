@@ -95,3 +95,32 @@ export async function registerDemoBot(): Promise<void> {
   await saveBotConfig(demo);
   console.log("[registry] demo bot registered:", demo.botId);
 }
+
+// ─── Register MeowChat Platform bot (own LINE OA for sales) ──────────────────
+
+export async function registerPlatformBot(): Promise<void> {
+  const secret = process.env.PLATFORM_LINE_CHANNEL_SECRET;
+  const token = process.env.PLATFORM_LINE_CHANNEL_ACCESS_TOKEN;
+  const geminiKey = process.env.GEMINI_API_KEY ?? "";
+
+  if (!secret || !token) {
+    console.log("[registry] PLATFORM_LINE_CHANNEL_SECRET/TOKEN not set — skipping platform bot");
+    return;
+  }
+
+  const platform: BotConfig = {
+    botId: "meowchat-platform",
+    botName: "น้องแมว",
+    businessName: "MeowChat",
+    personalityMode: "friendly",
+    businessScope: ["AI Chatbot LINE OA สำหรับธุรกิจไทย"],
+    lineChannelSecret: secret,
+    lineChannelAccessToken: token,
+    geminiApiKey: geminiKey,
+    model: "gemini-2.0-flash",
+    knowledgeBase: [],
+  };
+
+  await saveBotConfig(platform);
+  console.log("[registry] MeowChat platform bot registered: meowchat-platform");
+}

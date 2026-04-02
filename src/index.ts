@@ -2,7 +2,7 @@ import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { redis } from "./memory/redis.js";
 import { lineWebhookHandler } from "./proxy/line-webhook.js";
-import { registerDemoBot } from "./proxy/bot-registry.js";
+import { registerDemoBot, registerPlatformBot } from "./proxy/bot-registry.js";
 import { saveBotConfig, getBotConfig, listBotIds } from "./proxy/bot-registry.js";
 import type { BotConfig } from "./types/index.js";
 
@@ -72,6 +72,9 @@ async function start() {
   if (process.env.REGISTER_DEMO === "1") {
     await registerDemoBot();
   }
+
+  // Register MeowChat platform bot (own LINE OA for sales funnel)
+  await registerPlatformBot();
 
   serve({ fetch: app.fetch, port: PORT });
 

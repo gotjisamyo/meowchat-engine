@@ -13,6 +13,7 @@ import { assembleContext, estimateTokens } from "../engine/context-assembler.js"
 import { callGemini, analyzeSlipImage } from "../engine/gemini-client.js";
 import { scanSlipQR } from "../engine/qr-scanner.js";
 import { getBotConfig } from "./bot-registry.js";
+import { processPlatformEvent } from "./platform-handler.js";
 
 // ─── Verify LINE signature ────────────────────────────────────────────────────
 
@@ -92,7 +93,9 @@ export async function lineWebhookHandler(c: Context): Promise<Response> {
   // Process events in parallel (each user message is independent)
   await Promise.allSettled(
     events.map((event: Record<string, unknown>) =>
-      processLineEvent(event, config)
+      config.botId === "meowchat-platform"
+        ? processPlatformEvent(event, config)
+        : processLineEvent(event, config)
     )
   );
 
