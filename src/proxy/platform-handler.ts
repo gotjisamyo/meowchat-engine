@@ -142,7 +142,7 @@ function flexPricingMsg(): Record<string, unknown> {
       type: "image",
       url: `${FLEX_BASE}/${plan.heroImg}`,
       size: "full",
-      aspectRatio: "5:2",
+      aspectRatio: "3:1",
       aspectMode: "cover",
     },
     body: {
@@ -227,7 +227,7 @@ function flexReviewMsg(): Record<string, unknown> {
       type: "image",
       url: `${FLEX_BASE_R}/flex-header-reviews.jpg`,
       size: "full",
-      aspectRatio: "5:2",
+      aspectRatio: "3:1",
       aspectMode: "cover",
     },
     body: {
