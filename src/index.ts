@@ -69,6 +69,33 @@ app.get("/admin/list", async (c) => {
   return c.json({ count: ids.length, botIds: ids });
 });
 
+// ─── KB management endpoint ───────────────────────────────────────────────────
+// POST /admin/bots/:botId/kb  { chunks: KBEntry[] }
+// Saves chunks + triggers vector embedding in background
+
+app.post("/admin/bots/:botId/kb", async (c) => {
+  const apiKey = c.req.header("x-admin-key");
+  if (apiKey !== process.env.ADMIN_API_KEY) return c.json({ error: "unauthorized" }, 401);
+
+  const botId = c.req.param("botId");
+  const config = await getBotConfig(botId);
+  if (!config) return c.json({ error: "bot not found" }, 404);
+
+  const { chunks } = (await c.req.json()) as { chunks: import("./types/index.js").KBEntry[] };
+  if (!Array.isArray(chunks)) return c.json({ error: "chunks must be array" }, 400);
+
+  const { saveKBChunks } = await import("./memory/kb-store.js");
+  const { indexKBEmbeddings } = await import("./memory/kb-vectors.js");
+
+  await saveKBChunks(botId, chunks);
+  // Index embeddings in background — don't block response
+  indexKBEmbeddings(botId, chunks, config.geminiApiKey).catch((e) =>
+    console.error(`[kb] embed index error bot=${botId}:`, e)
+  );
+
+  return c.json({ ok: true, chunks: chunks.length, status: "indexing" });
+});
+
 // ─── Start ────────────────────────────────────────────────────────────────────
 
 const PORT = Number(process.env.PORT ?? 3100);

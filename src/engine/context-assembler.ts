@@ -5,6 +5,7 @@ import { buildProfileBlock } from "../memory/customer-profile.js";
 import { getWindow } from "../memory/conversation-buffer.js";
 import { buildKBBlock } from "./knowledge-base.js";
 import { retrieveKBChunks, migrateKBFromConfig } from "../memory/kb-store.js";
+import { vectorSearchKB, hasVectorIndex, indexKBEmbeddings } from "../memory/kb-vectors.js";
 
 // ─── System prompt template ───────────────────────────────────────────────────
 
@@ -79,9 +80,37 @@ export async function assembleContext(
   // 2. Guardrail + scope block (~150 tokens)
   const guardrailBlock = buildGuardrailBlock(config.businessScope);
 
-  // 3. KB snippet — Redis inverted index (migrate from config on first call)
+  // 3. KB retrieval — vector search (RAG) with keyword index fallback
   await migrateKBFromConfig(config.botId, config.knowledgeBase);
-  const kbChunks = await retrieveKBChunks(config.botId, userMessage, 3);
+
+  let kbChunks: import("../types/index.js").KBEntry[] = [];
+  const useVector = await hasVectorIndex(config.botId);
+
+  if (useVector) {
+    // RAG: embed query → cosine similarity
+    const hits = await vectorSearchKB(config.botId, userMessage, config.geminiApiKey, 3);
+    if (hits.length > 0) {
+      const raws = await Promise.all(
+        hits.map((h) =>
+          import("../memory/redis.js").then(({ redis }) =>
+            redis.get(`kb:chunk:${config.botId}:${h.chunkId}`)
+          )
+        )
+      );
+      kbChunks = raws
+        .filter((r): r is string => r !== null)
+        .map((r) => JSON.parse(r) as import("../types/index.js").KBEntry);
+    }
+    // Trigger background indexing for any new chunks not yet indexed
+    indexKBEmbeddings(config.botId, config.knowledgeBase, config.geminiApiKey).catch(() => {});
+  } else {
+    // Fallback: keyword inverted index + trigger vector indexing in background
+    kbChunks = await retrieveKBChunks(config.botId, userMessage, 3);
+    if (config.knowledgeBase.length > 0) {
+      indexKBEmbeddings(config.botId, config.knowledgeBase, config.geminiApiKey).catch(() => {});
+    }
+  }
+
   const kbSnippet = kbChunks.map((e) => `[${e.topic}]\n${e.content}`).join("\n\n");
   const kbBlock = buildKBBlock(kbSnippet);
 
