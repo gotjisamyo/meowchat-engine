@@ -1,6 +1,7 @@
 import { serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
+import path from "node:path";
 import { redis } from "./memory/redis.js";
 import { lineWebhookHandler } from "./proxy/line-webhook.js";
 import { registerDemoBot, registerPlatformBot } from "./proxy/bot-registry.js";
@@ -28,7 +29,9 @@ app.get("/health", async (c) => {
 // URL pattern: POST /webhook/line/:botId
 
 // ─── Static assets (product screenshots for LINE image messages) ──────────────
-app.use("/assets/*", serveStatic({ root: "./public" }));
+// root is relative to CWD (project root), not dist/
+const ASSETS_ROOT = path.resolve(process.cwd(), "public");
+app.use("/assets/*", serveStatic({ root: ASSETS_ROOT }));
 
 app.post("/webhook/line/:botId", lineWebhookHandler);
 
