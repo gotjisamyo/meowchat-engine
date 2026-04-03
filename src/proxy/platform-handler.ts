@@ -84,6 +84,239 @@ function buildReplyWithImages(
   return { replyToken, messages };
 }
 
+function buildFlexReply(
+  replyToken: string,
+  flex: Record<string, unknown>,
+  extra?: Record<string, unknown>
+) {
+  const messages: Record<string, unknown>[] = [flex];
+  if (extra) messages.push(extra);
+  return { replyToken, messages };
+}
+
+// ─── Flex Message: Pricing carousel (Art Oracle brand) ───────────────────────
+
+function flexPricingMsg(): Record<string, unknown> {
+  const plans = [
+    {
+      name: "ทดลองฟรี 14 วัน",
+      price: "฿0",
+      sub: "ไม่ต้องใส่บัตร",
+      headerColor: "#FFB74D",
+      features: ["ครบฟีเจอร์ Starter เต็มรูปแบบ", "ยกเลิกได้ทุกเมื่อ", "ทีมช่วย setup ฟรี"],
+      ctaLabel: "🎁 เริ่มทดลองฟรีเลย",
+      badge: "",
+    },
+    {
+      name: "Starter",
+      price: "฿490",
+      sub: "ต่อเดือน",
+      headerColor: "#6E48AA",
+      features: ["3,000 ข้อความ/เดือน", "AI Auto Reply ภาษาไทย", "Dashboard + Analytics"],
+      ctaLabel: "เลือกแผนนี้",
+      badge: "",
+    },
+    {
+      name: "Pro",
+      price: "฿990",
+      sub: "ต่อเดือน",
+      headerColor: "#5A3A9A",
+      features: ["15,000 ข้อความ/เดือน", "Multi-tone + Broadcast", "Human Handoff + Priority Support"],
+      ctaLabel: "เลือกแผนนี้",
+      badge: "⭐ ยอดนิยม",
+    },
+    {
+      name: "Business",
+      price: "฿2,490",
+      sub: "ต่อเดือน",
+      headerColor: "#4A2D8A",
+      features: ["50,000 ข้อความ/เดือน", "Team Inbox + CRM Integration", "Support 24/7"],
+      ctaLabel: "เลือกแผนนี้",
+      badge: "",
+    },
+  ];
+
+  const REGISTER_URI = "https://my.meowchat.store/register";
+
+  const bubbles = plans.map((plan) => ({
+    type: "bubble",
+    size: "kilo",
+    header: {
+      type: "box",
+      layout: "vertical",
+      backgroundColor: plan.headerColor,
+      paddingAll: "16px",
+      contents: [
+        ...(plan.badge
+          ? [{ type: "text", text: plan.badge, size: "xs", color: "#FFD700", weight: "bold" }]
+          : []),
+        { type: "text", text: plan.name, color: "#FFFFFF", size: "sm", weight: "bold" },
+        { type: "text", text: plan.price, color: "#FFFFFF", size: "xxl", weight: "bold" },
+        { type: "text", text: plan.sub, color: "#DDD0FF", size: "xs" },
+      ],
+    },
+    body: {
+      type: "box",
+      layout: "vertical",
+      backgroundColor: "#FFFDF5",
+      spacing: "sm",
+      paddingAll: "12px",
+      contents: plan.features.map((f) => ({
+        type: "box",
+        layout: "horizontal",
+        spacing: "sm",
+        contents: [
+          { type: "text", text: "✓", color: "#6E48AA", size: "sm", flex: 0 },
+          { type: "text", text: f, size: "sm", color: "#333333", wrap: true, flex: 1 },
+        ],
+      })),
+    },
+    footer: {
+      type: "box",
+      layout: "vertical",
+      backgroundColor: "#FFFDF5",
+      paddingAll: "12px",
+      contents: [
+        {
+          type: "button",
+          action: { type: "uri", label: plan.ctaLabel, uri: REGISTER_URI },
+          style: "primary",
+          color: "#FFB74D",
+          height: "sm",
+        },
+      ],
+    },
+  }));
+
+  return {
+    type: "flex",
+    altText: "ราคาแผน MeowChat: ทดลองฟรี 14 วัน / Starter ฿490 / Pro ฿990 / Business ฿2,490",
+    contents: { type: "carousel", contents: bubbles },
+  };
+}
+
+// ─── Flex Message: Review carousel (Art Oracle brand) ────────────────────────
+
+function flexReviewMsg(): Record<string, unknown> {
+  const reviews = [
+    {
+      emoji: "🍜",
+      name: "คุณแป้ง",
+      biz: "เจ้าของร้านอาหาร • กรุงเทพฯ",
+      text: "ยอดขายเพิ่มขึ้น 35% ในเดือนแรก บอทตอบลูกค้าได้ครบทุกคำถาม ทั้งเมนู จองโต๊ะ และเดลิเวอรี",
+    },
+    {
+      emoji: "👗",
+      name: "คุณมิ้น",
+      biz: "ร้านเสื้อผ้าออนไลน์ • เชียงใหม่",
+      text: "ประหยัดเวลาไป 4-5 ชั่วโมงต่อวัน บอทตอบแทนได้หมดทุกเรื่อง เอาเวลาไปจัดสต็อกแทนดีกว่า",
+    },
+    {
+      emoji: "💆",
+      name: "ดร.พลอย",
+      biz: "คลินิกความงาม • นนทบุรี",
+      text: "ระบบตรวจสลิปดีมากค่ะ ยืนยันการโอนอัตโนมัติ คนไข้ประทับใจที่ได้รับการยืนยันเร็ว",
+    },
+  ];
+
+  const REGISTER_URI = "https://my.meowchat.store/register";
+
+  const headerBubble = {
+    type: "bubble",
+    size: "kilo",
+    body: {
+      type: "box",
+      layout: "vertical",
+      backgroundColor: "#6E48AA",
+      paddingAll: "20px",
+      justifyContent: "center",
+      contents: [
+        { type: "text", text: "เสียงจากลูกค้า", color: "#FFFFFF", size: "lg", weight: "bold", align: "center" },
+        { type: "text", text: "200+ ร้านค้าทั่วไทย", color: "#DDD0FF", size: "sm", align: "center" },
+        {
+          type: "text",
+          text: "4.9 / 5 ⭐",
+          color: "#FFB74D",
+          size: "xl",
+          weight: "bold",
+          align: "center",
+          margin: "md",
+        },
+        {
+          type: "button",
+          action: { type: "uri", label: "ทดลองฟรี 14 วัน", uri: REGISTER_URI },
+          style: "primary",
+          color: "#FFB74D",
+          height: "sm",
+          margin: "lg",
+        },
+      ],
+    },
+  };
+
+  const reviewBubbles = reviews.map((r) => ({
+    type: "bubble",
+    size: "kilo",
+    body: {
+      type: "box",
+      layout: "vertical",
+      backgroundColor: "#FFFDF5",
+      spacing: "md",
+      paddingAll: "16px",
+      contents: [
+        { type: "text", text: "⭐⭐⭐⭐⭐", size: "sm" },
+        {
+          type: "text",
+          text: `"${r.text}"`,
+          size: "sm",
+          color: "#333333",
+          wrap: true,
+          margin: "sm",
+        },
+        {
+          type: "box",
+          layout: "horizontal",
+          spacing: "sm",
+          margin: "md",
+          contents: [
+            { type: "text", text: r.emoji, size: "xl", flex: 0 },
+            {
+              type: "box",
+              layout: "vertical",
+              flex: 1,
+              contents: [
+                { type: "text", text: r.name, size: "sm", weight: "bold", color: "#6E48AA" },
+                { type: "text", text: r.biz, size: "xxs", color: "#888888", wrap: true },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+    footer: {
+      type: "box",
+      layout: "vertical",
+      backgroundColor: "#FFFDF5",
+      paddingAll: "12px",
+      contents: [
+        {
+          type: "button",
+          action: { type: "uri", label: "อยากมีบอทแบบนี้!", uri: REGISTER_URI },
+          style: "primary",
+          color: "#FFB74D",
+          height: "sm",
+        },
+      ],
+    },
+  }));
+
+  return {
+    type: "flex",
+    altText: "เสียงจากลูกค้า MeowChat — 200+ ร้านค้าทั่วไทย คะแนน 4.9/5",
+    contents: { type: "carousel", contents: [headerBubble, ...reviewBubbles] },
+  };
+}
+
 async function sendReply(payload: object, accessToken: string): Promise<void> {
   await fetch("https://api.line.me/v2/bot/message/reply", {
     method: "POST",
@@ -96,35 +329,6 @@ async function sendReply(payload: object, accessToken: string): Promise<void> {
 }
 
 // ─── Static responses for rich menu buttons ───────────────────────────────────
-
-const PRICING_MESSAGE = `💰 ราคาแผน MeowChat
-
-🎁 ทดลองฟรี 14 วัน — ไม่ต้องใส่บัตร
-• ครบฟีเจอร์ Starter เต็มรูปแบบ
-• เริ่มได้เลยที่ my.meowchat.store
-
-🚀 Starter — ฿490/เดือน
-• 3,000 ข้อความ/เดือน
-• AI Auto Reply ภาษาไทย · ปรับบุคลิกได้
-• LINE OA · Dashboard + Analytics
-• ช่วย setup ผ่านกลุ่ม LINE ฟรี
-
-⭐ Pro — ฿990/เดือน ⭐ยอดนิยม
-• 15,000 ข้อความ/เดือน
-• Multi-tone · Product Catalog
-• Human Handoff + Analytics เต็มรูปแบบ
-• Broadcast · Priority Support
-
-💼 Business — ฿2,490/เดือน
-• 50,000 ข้อความ/เดือน
-• Team Inbox · CRM Integration
-• Priority Support 24/7
-
-👑 Enterprise — ราคาพิเศษ ติดต่อทีม
-• ข้อความไม่จำกัด
-• Custom AI + SLA + Dedicated Support
-
-✅ ยกเลิกได้ทุกเมื่อ ไม่มีสัญญา`;
 
 const ABOUT_MESSAGE = `🐱 MeowChat คืออะไร?
 
@@ -235,19 +439,7 @@ export async function processPlatformEvent(
   // ── Rich menu buttons — highest priority, always respond correctly ──────────
 
   if (t === "ราคา" || t === "ราคาและแผน" || t === "ราคา / แผน") {
-    await sendReply(
-      buildReplyWithImages(
-        replyToken,
-        ["pricing.jpg"],
-        PRICING_MESSAGE,
-        [
-          { label: "🚀 ทดลองฟรี 14 วัน", text: "ทดลองฟรี" },
-          { label: "🎮 ดูตัวอย่าง", text: "ดูตัวอย่าง" },
-          { label: "📞 คุยกับทีม", text: "ติดต่อทีม" },
-        ]
-      ),
-      token
-    );
+    await sendReply(buildFlexReply(replyToken, flexPricingMsg()), token);
     return;
   }
 
@@ -260,7 +452,7 @@ export async function processPlatformEvent(
         [
           { label: "🎮 ดูตัวอย่าง", text: "ดูตัวอย่าง" },
           { label: "💰 ดูราคา", text: "ราคา" },
-          { label: "🚀 ทดลองฟรี", text: "ทดลองฟรี" },
+          { label: "🚀 ทดลองฟรี 14 วัน", text: "ทดลองฟรี" },
         ]
       ),
       token
@@ -269,13 +461,7 @@ export async function processPlatformEvent(
   }
 
   if (t === "รีวิวจากลูกค้า" || t === "รีวิว") {
-    await sendReply(
-      buildReplyWithImages(replyToken, ["reviews.jpg"], REVIEW_MESSAGE, [
-        { label: "🚀 ทดลองฟรีเลย!", text: "ทดลองฟรี" },
-        { label: "💰 ดูราคา", text: "ราคา" },
-      ]),
-      token
-    );
+    await sendReply(buildFlexReply(replyToken, flexReviewMsg()), token);
     return;
   }
 
