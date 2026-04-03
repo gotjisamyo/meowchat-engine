@@ -100,82 +100,79 @@ function flexPricingMsg(): Record<string, unknown> {
   const plans = [
     {
       name: "ทดลองฟรี 14 วัน",
-      price: "฿0",
+      price: "ฟรี",
       sub: "ไม่ต้องใส่บัตร",
-      headerColor: "#FFB74D",
+      heroImg: "flex-header-trial.jpg",
       features: ["ครบฟีเจอร์ Starter เต็มรูปแบบ", "ยกเลิกได้ทุกเมื่อ", "ทีมช่วย setup ฟรี"],
       ctaLabel: "🎁 เริ่มทดลองฟรีเลย",
-      badge: "",
     },
     {
       name: "Starter",
-      price: "฿490",
-      sub: "ต่อเดือน",
-      headerColor: "#6E48AA",
-      features: ["3,000 ข้อความ/เดือน", "AI Auto Reply ภาษาไทย", "Dashboard + Analytics"],
+      price: "฿490/เดือน",
+      sub: "3,000 ข้อความ",
+      heroImg: "flex-header-starter.jpg",
+      features: ["AI Auto Reply ภาษาไทย", "Dashboard + Analytics", "ทีมช่วย setup ฟรี"],
       ctaLabel: "เลือกแผนนี้",
-      badge: "",
     },
     {
-      name: "Pro",
-      price: "฿990",
-      sub: "ต่อเดือน",
-      headerColor: "#5A3A9A",
-      features: ["15,000 ข้อความ/เดือน", "Multi-tone + Broadcast", "Human Handoff + Priority Support"],
+      name: "Pro ⭐ ยอดนิยม",
+      price: "฿990/เดือน",
+      sub: "15,000 ข้อความ",
+      heroImg: "flex-header-pro.jpg",
+      features: ["Multi-tone + Broadcast", "Human Handoff", "Priority Support"],
       ctaLabel: "เลือกแผนนี้",
-      badge: "⭐ ยอดนิยม",
     },
     {
       name: "Business",
-      price: "฿2,490",
-      sub: "ต่อเดือน",
-      headerColor: "#4A2D8A",
-      features: ["50,000 ข้อความ/เดือน", "Team Inbox + CRM Integration", "Support 24/7"],
+      price: "฿2,490/เดือน",
+      sub: "50,000 ข้อความ",
+      heroImg: "flex-header-business.jpg",
+      features: ["Team Inbox + CRM", "Support 24/7", "Advanced Analytics"],
       ctaLabel: "เลือกแผนนี้",
-      badge: "",
     },
   ];
 
+  const FLEX_BASE = `${ASSET_BASE}/flex`;
   const REGISTER_URI = "https://my.meowchat.store/register";
 
   const bubbles = plans.map((plan) => ({
     type: "bubble",
     size: "kilo",
-    header: {
-      type: "box",
-      layout: "vertical",
-      backgroundColor: plan.headerColor,
-      paddingAll: "16px",
-      contents: [
-        ...(plan.badge
-          ? [{ type: "text", text: plan.badge, size: "xs", color: "#FFD700", weight: "bold" }]
-          : []),
-        { type: "text", text: plan.name, color: "#FFFFFF", size: "sm", weight: "bold" },
-        { type: "text", text: plan.price, color: "#FFFFFF", size: "xxl", weight: "bold" },
-        { type: "text", text: plan.sub, color: "#DDD0FF", size: "xs" },
-      ],
+    hero: {
+      type: "image",
+      url: `${FLEX_BASE}/${plan.heroImg}`,
+      size: "full",
+      aspectRatio: "5:2",
+      aspectMode: "cover",
     },
     body: {
       type: "box",
       layout: "vertical",
       backgroundColor: "#FFFDF5",
-      spacing: "sm",
+      spacing: "xs",
       paddingAll: "12px",
-      contents: plan.features.map((f) => ({
-        type: "box",
-        layout: "horizontal",
-        spacing: "sm",
-        contents: [
-          { type: "text", text: "✓", color: "#6E48AA", size: "sm", flex: 0 },
-          { type: "text", text: f, size: "sm", color: "#333333", wrap: true, flex: 1 },
-        ],
-      })),
+      contents: [
+        { type: "text", text: plan.name, size: "sm", weight: "bold", color: "#6E48AA" },
+        { type: "text", text: plan.price, size: "xl", weight: "bold", color: "#1A1A2E" },
+        { type: "text", text: plan.sub, size: "xs", color: "#888888", margin: "none" },
+        { type: "separator", margin: "sm" },
+        ...plan.features.map((f) => ({
+          type: "box",
+          layout: "horizontal",
+          spacing: "sm",
+          margin: "xs",
+          contents: [
+            { type: "text", text: "✓", color: "#6E48AA", size: "xs", flex: 0 },
+            { type: "text", text: f, size: "xs", color: "#333333", wrap: true, flex: 1 },
+          ],
+        })),
+      ],
     },
     footer: {
       type: "box",
       layout: "vertical",
       backgroundColor: "#FFFDF5",
-      paddingAll: "12px",
+      paddingAll: "10px",
       contents: [
         {
           type: "button",
@@ -221,34 +218,34 @@ function flexReviewMsg(): Record<string, unknown> {
 
   const REGISTER_URI = "https://my.meowchat.store/register";
 
+  const FLEX_BASE_R = `${ASSET_BASE}/flex`;
+
   const headerBubble = {
     type: "bubble",
     size: "kilo",
+    hero: {
+      type: "image",
+      url: `${FLEX_BASE_R}/flex-header-reviews.jpg`,
+      size: "full",
+      aspectRatio: "5:2",
+      aspectMode: "cover",
+    },
     body: {
       type: "box",
       layout: "vertical",
-      backgroundColor: "#6E48AA",
-      paddingAll: "20px",
+      backgroundColor: "#FFFDF5",
+      paddingAll: "16px",
       justifyContent: "center",
       contents: [
-        { type: "text", text: "เสียงจากลูกค้า", color: "#FFFFFF", size: "lg", weight: "bold", align: "center" },
-        { type: "text", text: "200+ ร้านค้าทั่วไทย", color: "#DDD0FF", size: "sm", align: "center" },
-        {
-          type: "text",
-          text: "4.9 / 5 ⭐",
-          color: "#FFB74D",
-          size: "xl",
-          weight: "bold",
-          align: "center",
-          margin: "md",
-        },
+        { type: "text", text: "เสียงจากลูกค้า MeowChat", color: "#6E48AA", size: "md", weight: "bold", align: "center" },
+        { type: "text", text: "200+ ร้านค้าทั่วไทย • 4.9/5 ⭐", color: "#888888", size: "sm", align: "center" },
         {
           type: "button",
           action: { type: "uri", label: "ทดลองฟรี 14 วัน", uri: REGISTER_URI },
           style: "primary",
           color: "#FFB74D",
           height: "sm",
-          margin: "lg",
+          margin: "md",
         },
       ],
     },

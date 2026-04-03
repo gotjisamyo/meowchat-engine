@@ -11,6 +11,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageFilter
 OUTPUT = sys.argv[1] if len(sys.argv) > 1 else "platform-richmenu.jpg"
 ASSETS = "/home/got/Pictures"
 BASE   = "/usr/share/fonts/truetype/noto/"
+MERGED = "/tmp/NotoMerged-Bold.ttf"  # Thai + Latin merged (no tofu)
 
 W, H   = 2500, 1686
 COLS   = 3
@@ -35,11 +36,11 @@ TEXT_WHITE  = (255, 255, 255)
 def font(path, size):
     return ImageFont.truetype(path, size)
 
-F_LABEL    = font(BASE + "NotoSansThai-Bold.ttf", 58)
-F_SUBLABEL = font(BASE + "NotoSansThai-Bold.ttf", 34)
-F_CTA_BIG  = font(BASE + "NotoSansThai-Bold.ttf", 78)
-F_CTA_SUB  = font(BASE + "NotoSansThai-Bold.ttf", 40)
-F_BADGE    = font(BASE + "NotoSansThai-Bold.ttf", 30)
+F_LABEL    = font(MERGED, 58)
+F_SUBLABEL = font(MERGED, 34)
+F_CTA_BIG  = font(MERGED, 78)
+F_CTA_SUB  = font(MERGED, 40)
+F_BADGE    = font(MERGED, 30)
 
 # ─── Cell definitions ──────────────────────────────────────────────────────────
 # type "purple": cat + purple gradient (row 0)
