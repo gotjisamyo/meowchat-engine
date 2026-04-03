@@ -99,20 +99,22 @@ async function sendReply(payload: object, accessToken: string): Promise<void> {
 
 const PRICING_MESSAGE = `💰 ราคาแผน MeowChat
 
-🐱 ทดลองใช้ — ฟรี 14 วัน
-• ไม่ต้องใส่บัตร ไม่มีค่าใช้จ่าย
-• บอทตอบอัตโนมัติทันที
+🐱 Free — ฟรี
+• LINE OA 1 บัญชี
+• AI Auto Reply + Dashboard + Human Handoff
+• ทดลองใช้ฟรีได้เลย ไม่ต้องใส่บัตร
 
-🚀 Pro — ฿376/เดือน ⭐ยอดนิยม
-• 2,000 ข้อความ/เดือน (≈65 ครั้ง/วัน)
+🚀 Starter — ฿199/เดือน
+• 1,000 ข้อความ/เดือน
 • AI Auto Reply ภาษาไทย · ปรับบุคลิกได้
-• LINE OA 1 บัญชี (เพิ่มได้ +฿500/OA)
-• Dashboard + Human Handoff + Analytics
-• ช่วยตั้งค่าผ่านกลุ่ม LINE ฟรี
+• LINE OA 1 บัญชี · Dashboard + Analytics
+• ช่วย setup ผ่านกลุ่ม LINE ฟรี
 
-⚡ Pro+ — ฿790/เดือน
-• 10,000 ข้อความ/เดือน (≈330/วัน)
+⭐ Pro — ฿590/เดือน ⭐ยอดนิยม
+• 10,000 ข้อความ/เดือน
 • LINE OA 3 บัญชี
+• Facebook Messenger รองรับ
+• Human Handoff + Analytics เต็มรูปแบบ
 • Broadcast ไม่จำกัด · Priority Support
 
 👑 Enterprise — ฿1,990/เดือน
@@ -121,7 +123,8 @@ const PRICING_MESSAGE = `💰 ราคาแผน MeowChat
 • API Integration + ทีม Support ส่วนตัว 24/7
 
 📊 ข้อความหมดก่อนสิ้นเดือน? เติมได้ ฿99 ต่อ 500 ครั้ง
-✅ ทดลองฟรี 14 วัน — ยกเลิกได้ทุกเมื่อ ไม่มีสัญญา`;
+🏪 ดูแลหลาย LINE OA? เพิ่มได้ทุกแพ็กเกจ ฿500/OA/เดือน
+✅ ทดลองฟรี — ยกเลิกได้ทุกเมื่อ ไม่มีสัญญา`;
 
 const ABOUT_MESSAGE = `🐱 MeowChat คืออะไร?
 
@@ -189,11 +192,11 @@ const MEOWCHAT_SYSTEM_PROMPT = `คุณคือ "น้องแมว" — A
 5. ความจำลูกค้า — จำประวัติและความชอบของแต่ละคน
 
 ราคา:
-- ทดลองใช้: ฟรี 14 วัน ไม่ต้องใส่บัตร
-- Pro: ฿376/เดือน (2,000 ข้อความ) — AI Auto Reply + Dashboard + Human Handoff
-- Pro+: ฿790/เดือน (10,000 ข้อความ) — LINE OA 3 บัญชี + Broadcast ไม่จำกัด
-- Enterprise: ฿1,990/เดือน (fair-use ≤50,000) — OA ไม่จำกัด + หลายสาขา + API
-- เติมข้อความเพิ่มได้ ฿99 ต่อ 500 ครั้ง ถ้าหมดก่อนสิ้นเดือน
+- Free: ฟรี — LINE OA 1 บัญชี AI Auto Reply + Dashboard
+- Starter: ฿199/เดือน — 1,000 ข้อความ, LINE OA 1 บัญชี
+- Pro: ฿590/เดือน — 10,000 ข้อความ, LINE OA 3 บัญชี, Facebook Messenger, Broadcast ไม่จำกัด ⭐ยอดนิยม
+- Enterprise: ฿1,990/เดือน — fair-use ≤50,000 ข้อความ, OA ไม่จำกัด, หลายสาขา, API
+- เติมข้อความเพิ่มได้ ฿99 ต่อ 500 ครั้ง, เพิ่ม OA ได้ ฿500/OA/เดือน
 
 สมัคร: my.meowchat.store/register
 ติดต่อ: hello@meowchat.store / LINE: @meowchat
@@ -235,7 +238,7 @@ export async function processPlatformEvent(
     await sendReply(
       buildReplyWithImages(
         replyToken,
-        ["marketing.jpg", "dashboard.jpg"],
+        ["pricing.jpg"],
         PRICING_MESSAGE,
         [
           { label: "🚀 ทดลองฟรี 14 วัน", text: "ทดลองฟรี" },
@@ -252,7 +255,7 @@ export async function processPlatformEvent(
     await sendReply(
       buildReplyWithImages(
         replyToken,
-        ["demo-shop.jpg", "analytics.jpg"],
+        ["hero.jpg", "features.jpg"],
         ABOUT_MESSAGE,
         [
           { label: "🎮 ดูตัวอย่าง", text: "ดูตัวอย่าง" },
@@ -267,7 +270,7 @@ export async function processPlatformEvent(
 
   if (t === "รีวิวจากลูกค้า" || t === "รีวิว") {
     await sendReply(
-      buildReply(replyToken, REVIEW_MESSAGE, [
+      buildReplyWithImages(replyToken, ["reviews.jpg"], REVIEW_MESSAGE, [
         { label: "🚀 ทดลองฟรีเลย!", text: "ทดลองฟรี" },
         { label: "💰 ดูราคา", text: "ราคา" },
       ]),
@@ -309,7 +312,7 @@ export async function processPlatformEvent(
       await sendReply(
         buildReplyWithImages(
           replyToken,
-          ["demo-shop.jpg", "orders.jpg"],
+          ["chatdemo.jpg", "usecases.jpg"],
           getDemoMessage(bizType),
           [
             { label: "🚀 สมัครเลย!", text: "ทดลองฟรี" },
