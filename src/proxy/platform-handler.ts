@@ -192,6 +192,81 @@ function flexPricingMsg(): Record<string, unknown> {
   };
 }
 
+// ─── Flex Message: Dashboard showcase ────────────────────────────────────────
+
+function flexDashboardMsg(): Record<string, unknown> {
+  const DB_BASE = `${ASSET_BASE}/dashboard`;
+  const REGISTER_URI = "https://my.meowchat.store/register";
+
+  const screens = [
+    {
+      img: "03_dashboard.jpg",
+      title: "📊 Dashboard",
+      desc: "ภาพรวม chat วันนี้ KPI และสถิติทันที",
+    },
+    {
+      img: "08_knowledge.jpg",
+      title: "🧠 Knowledge Base",
+      desc: "ใส่ข้อมูลร้าน สินค้า FAQ — AI เรียนรู้และตอบแทนคุณ",
+    },
+    {
+      img: "05_analytics.jpg",
+      title: "📈 Analytics",
+      desc: "กราฟ chat volume, escalation rate, AI performance",
+    },
+    {
+      img: "06_subscription.jpg",
+      title: "💳 Subscription",
+      desc: "จัดการแผนและ upgrade ได้ตลอดเวลา",
+    },
+  ];
+
+  const bubbles = screens.map((s) => ({
+    type: "bubble",
+    size: "kilo",
+    hero: {
+      type: "image",
+      url: `${DB_BASE}/${s.img}`,
+      size: "full",
+      aspectRatio: "20:13",
+      aspectMode: "cover",
+      action: { type: "uri", uri: REGISTER_URI },
+    },
+    body: {
+      type: "box",
+      layout: "vertical",
+      backgroundColor: "#1A1A2E",
+      paddingAll: "12px",
+      spacing: "xs",
+      contents: [
+        { type: "text", text: s.title, size: "sm", weight: "bold", color: "#FFB74D" },
+        { type: "text", text: s.desc, size: "xs", color: "#CCCCCC", wrap: true },
+      ],
+    },
+    footer: {
+      type: "box",
+      layout: "vertical",
+      backgroundColor: "#1A1A2E",
+      paddingAll: "10px",
+      contents: [
+        {
+          type: "button",
+          action: { type: "uri", label: "ทดลองใช้ฟรี 14 วัน", uri: REGISTER_URI },
+          style: "primary",
+          color: "#6E48AA",
+          height: "sm",
+        },
+      ],
+    },
+  }));
+
+  return {
+    type: "flex",
+    altText: "ดูระบบหลังบ้าน MeowChat — Dashboard, Analytics, Knowledge Base",
+    contents: { type: "carousel", contents: bubbles },
+  };
+}
+
 // ─── Flex Message: Review carousel (Art Oracle brand) ────────────────────────
 
 function flexReviewMsg(): Record<string, unknown> {
@@ -470,6 +545,11 @@ export async function processPlatformEvent(
       ]),
       token
     );
+    return;
+  }
+
+  if (t === "ดูแดชบอร์ด" || t === "ระบบหลังบ้าน" || t === "ดูระบบ" || t.includes("dashboard")) {
+    await sendReply(buildFlexReply(replyToken, flexDashboardMsg()), token);
     return;
   }
 

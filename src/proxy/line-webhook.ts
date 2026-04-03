@@ -22,13 +22,15 @@ function verifyLineSignature(
   signature: string,
   secret: string
 ): boolean {
+  if (!signature) return false;
   const hmac = crypto.createHmac("sha256", secret);
   hmac.update(body);
   const expected = hmac.digest("base64");
-  return crypto.timingSafeEqual(
-    Buffer.from(signature),
-    Buffer.from(expected)
-  );
+  // Decode both as base64 before comparing to ensure equal byte lengths
+  const sigBuf = Buffer.from(signature, "base64");
+  const expBuf = Buffer.from(expected, "base64");
+  if (sigBuf.length !== expBuf.length) return false;
+  return crypto.timingSafeEqual(sigBuf, expBuf);
 }
 
 // ─── Reply to LINE via Messaging API ─────────────────────────────────────────
