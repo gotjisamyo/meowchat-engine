@@ -1,4 +1,5 @@
 import { serve } from "@hono/node-server";
+import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
 import { redis } from "./memory/redis.js";
 import { lineWebhookHandler } from "./proxy/line-webhook.js";
@@ -25,6 +26,9 @@ app.get("/health", async (c) => {
 // ─── LINE OA webhook (per bot) ────────────────────────────────────────────────
 // Vercel/Railway: set env LINE_CHANNEL_SECRET, LINE_CHANNEL_ACCESS_TOKEN per bot
 // URL pattern: POST /webhook/line/:botId
+
+// ─── Static assets (product screenshots for LINE image messages) ──────────────
+app.use("/assets/*", serveStatic({ root: "./public" }));
 
 app.post("/webhook/line/:botId", lineWebhookHandler);
 

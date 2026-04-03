@@ -35,23 +35,53 @@ async function setState(userId: string, state: PlatformUserState): Promise<void>
   }
 }
 
+// ─── Asset base URL ───────────────────────────────────────────────────────────
+
+const ASSET_BASE = "https://meowchat-engine-production.up.railway.app/assets";
+
 // ─── Build LINE reply payload ─────────────────────────────────────────────────
 
-function buildReply(
-  replyToken: string,
+function imgMsg(filename: string): Record<string, unknown> {
+  const url = `${ASSET_BASE}/${filename}`;
+  return { type: "image", originalContentUrl: url, previewImageUrl: url };
+}
+
+function textMsg(
   text: string,
   quickReplies?: Array<{ label: string; text: string }>
-) {
-  const message: Record<string, unknown> = { type: "text", text };
+): Record<string, unknown> {
+  const msg: Record<string, unknown> = { type: "text", text };
   if (quickReplies?.length) {
-    message.quickReply = {
+    msg.quickReply = {
       items: quickReplies.map((qr) => ({
         type: "action",
         action: { type: "message", label: qr.label, text: qr.text },
       })),
     };
   }
-  return { replyToken, messages: [message] };
+  return msg;
+}
+
+function buildReply(
+  replyToken: string,
+  text: string,
+  quickReplies?: Array<{ label: string; text: string }>
+) {
+  return { replyToken, messages: [textMsg(text, quickReplies)] };
+}
+
+function buildReplyWithImages(
+  replyToken: string,
+  images: string[],
+  text: string,
+  quickReplies?: Array<{ label: string; text: string }>
+) {
+  // LINE allows max 5 messages per reply
+  const messages: Record<string, unknown>[] = [
+    ...images.slice(0, 4).map(imgMsg),
+    textMsg(text, quickReplies),
+  ];
+  return { replyToken, messages };
 }
 
 async function sendReply(payload: object, accessToken: string): Promise<void> {
@@ -203,11 +233,16 @@ export async function processPlatformEvent(
 
   if (t === "ราคา" || t === "ราคาและแผน" || t === "ราคา / แผน") {
     await sendReply(
-      buildReply(replyToken, PRICING_MESSAGE, [
-        { label: "🚀 ทดลองฟรี 14 วัน", text: "ทดลองฟรี" },
-        { label: "🎮 ดูตัวอย่าง", text: "ดูตัวอย่าง" },
-        { label: "📞 คุยกับทีม", text: "ติดต่อทีม" },
-      ]),
+      buildReplyWithImages(
+        replyToken,
+        ["marketing.jpg", "dashboard.jpg"],
+        PRICING_MESSAGE,
+        [
+          { label: "🚀 ทดลองฟรี 14 วัน", text: "ทดลองฟรี" },
+          { label: "🎮 ดูตัวอย่าง", text: "ดูตัวอย่าง" },
+          { label: "📞 คุยกับทีม", text: "ติดต่อทีม" },
+        ]
+      ),
       token
     );
     return;
@@ -215,11 +250,16 @@ export async function processPlatformEvent(
 
   if (t === "เหมียวแชทคืออะไร" || t === "meowchat คืออะไร" || t === "คืออะไร") {
     await sendReply(
-      buildReply(replyToken, ABOUT_MESSAGE, [
-        { label: "🎮 ดูตัวอย่าง", text: "ดูตัวอย่าง" },
-        { label: "💰 ดูราคา", text: "ราคา" },
-        { label: "🚀 ทดลองฟรี", text: "ทดลองฟรี" },
-      ]),
+      buildReplyWithImages(
+        replyToken,
+        ["demo-shop.jpg", "analytics.jpg"],
+        ABOUT_MESSAGE,
+        [
+          { label: "🎮 ดูตัวอย่าง", text: "ดูตัวอย่าง" },
+          { label: "💰 ดูราคา", text: "ราคา" },
+          { label: "🚀 ทดลองฟรี", text: "ทดลองฟรี" },
+        ]
+      ),
       token
     );
     return;
@@ -267,10 +307,15 @@ export async function processPlatformEvent(
     const bizType = state?.businessType ?? null;
     if (bizType) {
       await sendReply(
-        buildReply(replyToken, getDemoMessage(bizType), [
-          { label: "🚀 สมัครเลย!", text: "ทดลองฟรี" },
-          { label: "💰 ดูราคา", text: "ราคา" },
-        ]),
+        buildReplyWithImages(
+          replyToken,
+          ["demo-shop.jpg", "orders.jpg"],
+          getDemoMessage(bizType),
+          [
+            { label: "🚀 สมัครเลย!", text: "ทดลองฟรี" },
+            { label: "💰 ดูราคา", text: "ราคา" },
+          ]
+        ),
         token
       );
     } else {
