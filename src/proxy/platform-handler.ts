@@ -99,32 +99,32 @@ async function sendReply(payload: object, accessToken: string): Promise<void> {
 
 const PRICING_MESSAGE = `💰 ราคาแผน MeowChat
 
-🐱 Free — ฟรี
-• LINE OA 1 บัญชี
-• AI Auto Reply + Dashboard + Human Handoff
-• ทดลองใช้ฟรีได้เลย ไม่ต้องใส่บัตร
+🎁 ทดลองฟรี 14 วัน — ไม่ต้องใส่บัตร
+• ครบฟีเจอร์ Starter เต็มรูปแบบ
+• เริ่มได้เลยที่ my.meowchat.store
 
-🚀 Starter — ฿199/เดือน
-• 1,000 ข้อความ/เดือน
+🚀 Starter — ฿490/เดือน
+• 3,000 ข้อความ/เดือน
 • AI Auto Reply ภาษาไทย · ปรับบุคลิกได้
-• LINE OA 1 บัญชี · Dashboard + Analytics
+• LINE OA · Dashboard + Analytics
 • ช่วย setup ผ่านกลุ่ม LINE ฟรี
 
-⭐ Pro — ฿590/เดือน ⭐ยอดนิยม
-• 10,000 ข้อความ/เดือน
-• LINE OA 3 บัญชี
-• Facebook Messenger รองรับ
+⭐ Pro — ฿990/เดือน ⭐ยอดนิยม
+• 15,000 ข้อความ/เดือน
+• Multi-tone · Product Catalog
 • Human Handoff + Analytics เต็มรูปแบบ
-• Broadcast ไม่จำกัด · Priority Support
+• Broadcast · Priority Support
 
-👑 Enterprise — ฿1,990/เดือน
-• ข้อความ fair-use ไม่จำกัด (≤50,000/เดือน)
-• LINE OA ไม่จำกัดบัญชี · หลายสาขา
-• API Integration + ทีม Support ส่วนตัว 24/7
+💼 Business — ฿2,490/เดือน
+• 50,000 ข้อความ/เดือน
+• Team Inbox · CRM Integration
+• Priority Support 24/7
 
-📊 ข้อความหมดก่อนสิ้นเดือน? เติมได้ ฿99 ต่อ 500 ครั้ง
-🏪 ดูแลหลาย LINE OA? เพิ่มได้ทุกแพ็กเกจ ฿500/OA/เดือน
-✅ ทดลองฟรี — ยกเลิกได้ทุกเมื่อ ไม่มีสัญญา`;
+👑 Enterprise — ราคาพิเศษ ติดต่อทีม
+• ข้อความไม่จำกัด
+• Custom AI + SLA + Dedicated Support
+
+✅ ยกเลิกได้ทุกเมื่อ ไม่มีสัญญา`;
 
 const ABOUT_MESSAGE = `🐱 MeowChat คืออะไร?
 
@@ -192,11 +192,11 @@ const MEOWCHAT_SYSTEM_PROMPT = `คุณคือ "น้องแมว" — A
 5. ความจำลูกค้า — จำประวัติและความชอบของแต่ละคน
 
 ราคา:
-- Free: ฟรี — LINE OA 1 บัญชี AI Auto Reply + Dashboard
-- Starter: ฿199/เดือน — 1,000 ข้อความ, LINE OA 1 บัญชี
-- Pro: ฿590/เดือน — 10,000 ข้อความ, LINE OA 3 บัญชี, Facebook Messenger, Broadcast ไม่จำกัด ⭐ยอดนิยม
-- Enterprise: ฿1,990/เดือน — fair-use ≤50,000 ข้อความ, OA ไม่จำกัด, หลายสาขา, API
-- เติมข้อความเพิ่มได้ ฿99 ต่อ 500 ครั้ง, เพิ่ม OA ได้ ฿500/OA/เดือน
+- ทดลองฟรี 14 วัน — ไม่ต้องใส่บัตร ครบฟีเจอร์ Starter
+- Starter: ฿490/เดือน — 3,000 ข้อความ
+- Pro: ฿990/เดือน — 15,000 ข้อความ ⭐ยอดนิยม
+- Business: ฿2,490/เดือน — 50,000 ข้อความ, Team Inbox, CRM
+- Enterprise: ราคาพิเศษ (ติดต่อทีม) — ไม่จำกัด, Custom AI, SLA
 
 สมัคร: my.meowchat.store/register
 ติดต่อ: hello@meowchat.store / LINE: @meowchat
