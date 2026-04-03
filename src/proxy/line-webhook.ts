@@ -305,7 +305,7 @@ async function handleMessage(
 
   // 4. Assemble context BEFORE adding current turn — window must not include
   //    the current user message (assembleContext appends it itself)
-  const payload = assembleContext(config, profile, event.text);
+  const payload = await assembleContext(config, profile, event.text);
 
   // 6. Log token estimate
   const tokenEstimate = estimateTokens(payload);

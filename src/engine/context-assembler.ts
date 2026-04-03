@@ -3,7 +3,8 @@ import { buildPersonalityBlock, getTemperature } from "./personality.js";
 import { buildGuardrailBlock } from "./guardrails.js";
 import { buildProfileBlock } from "../memory/customer-profile.js";
 import { getWindow } from "../memory/conversation-buffer.js";
-import { retrieveKBSnippet, buildKBBlock } from "./knowledge-base.js";
+import { buildKBBlock } from "./knowledge-base.js";
+import { retrieveKBChunks, migrateKBFromConfig } from "../memory/kb-store.js";
 
 // ─── System prompt template ───────────────────────────────────────────────────
 
@@ -64,11 +65,11 @@ function buildSystemPrompt(params: {
 // ─── Main assembly function ───────────────────────────────────────────────────
 // Call this before every LLM request
 
-export function assembleContext(
+export async function assembleContext(
   config: BotConfig,
   customer: CustomerProfile,
   userMessage: string
-): LLMPayload {
+): Promise<LLMPayload> {
   // 1. Personality block (~100 tokens)
   const personalityBlock = buildPersonalityBlock(
     config.botName,
@@ -78,8 +79,10 @@ export function assembleContext(
   // 2. Guardrail + scope block (~150 tokens)
   const guardrailBlock = buildGuardrailBlock(config.businessScope);
 
-  // 3. KB snippet — retrieve relevant chunks (~200–400 tokens)
-  const kbSnippet = retrieveKBSnippet(userMessage, config.knowledgeBase, 3);
+  // 3. KB snippet — Redis inverted index (migrate from config on first call)
+  await migrateKBFromConfig(config.botId, config.knowledgeBase);
+  const kbChunks = await retrieveKBChunks(config.botId, userMessage, 3);
+  const kbSnippet = kbChunks.map((e) => `[${e.topic}]\n${e.content}`).join("\n\n");
   const kbBlock = buildKBBlock(kbSnippet);
 
   // 4. Customer profile block (~60–80 tokens)
