@@ -389,6 +389,17 @@ function flexReviewMsg(): Record<string, unknown> {
   };
 }
 
+async function sendPush(userId: string, messages: Record<string, unknown>[], accessToken: string): Promise<void> {
+  await fetch("https://api.line.me/v2/bot/message/push", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ to: userId, messages }),
+  });
+}
+
 async function sendReply(payload: object, accessToken: string): Promise<void> {
   await fetch("https://api.line.me/v2/bot/message/reply", {
     method: "POST",
@@ -516,19 +527,24 @@ export async function processPlatformEvent(
   }
 
   if (t === "เหมียวแชทคืออะไร" || t === "meowchat คืออะไร" || t === "คืออะไร") {
+    // Show about text + dashboard screenshots proactively (no need to ask)
     await sendReply(
-      buildReplyWithImages(
+      {
         replyToken,
-        ["hero.jpg", "features.jpg"],
-        ABOUT_MESSAGE,
-        [
-          { label: "🎮 ดูตัวอย่าง", text: "ดูตัวอย่าง" },
-          { label: "💰 ดูราคา", text: "ราคา" },
-          { label: "🚀 ทดลองฟรี 14 วัน", text: "ทดลองฟรี" },
-        ]
-      ),
+        messages: [
+          imgMsg("hero.jpg"),
+          textMsg(ABOUT_MESSAGE, [
+            { label: "🎮 ดูตัวอย่าง", text: "ดูตัวอย่าง" },
+            { label: "💰 ดูราคา", text: "ราคา" },
+            { label: "🚀 ทดลองฟรี 14 วัน", text: "ทดลองฟรี" },
+          ]),
+        ],
+      },
       token
     );
+    // Send dashboard flex as follow-up push (LINE allows 5 msgs per reply — use push for 2nd batch)
+    // Actually send as 2nd reply via push message
+    await sendPush(userId, [flexDashboardMsg()], token);
     return;
   }
 
