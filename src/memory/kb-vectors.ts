@@ -15,7 +15,7 @@ const EMB_TTL = 60 * 60 * 24 * 365; // 1 year
 
 async function embed(text: string, apiKey: string): Promise<number[]> {
   const resp = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1/models/text-embedding-004:embedContent?key=${apiKey}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },

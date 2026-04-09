@@ -110,7 +110,13 @@ app.post("/admin/bots/:botId/simulate", async (c) => {
 
   const { handleMessage } = await import("./proxy/line-webhook.js");
 
-  const fakeEvent = { text: message, replyToken: "simulate", type: "message" as const };
+  const fakeEvent = {
+    botId: config.botId,
+    userId: "simulate-user",
+    replyToken: "simulate",
+    text: message,
+    channel: "line" as const,
+  };
   const { reply, escalated } = await handleMessage(fakeEvent, config);
 
   return c.json({ reply, escalated, botName: config.botName });
