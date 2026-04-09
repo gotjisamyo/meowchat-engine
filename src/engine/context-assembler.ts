@@ -101,6 +101,10 @@ export async function assembleContext(
         .filter((r): r is string => r !== null)
         .map((r) => JSON.parse(r) as import("../types/index.js").KBEntry);
     }
+    // If vector search returned nothing, fall back to keyword search
+    if (kbChunks.length === 0) {
+      kbChunks = await retrieveKBChunks(config.botId, userMessage, 3);
+    }
     // Trigger background indexing for any new chunks not yet indexed
     indexKBEmbeddings(config.botId, config.knowledgeBase, config.geminiApiKey).catch(() => {});
   } else {
