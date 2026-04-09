@@ -84,15 +84,30 @@ export async function retrieveKBChunks(
       .sort((a, b) => b[1] - a[1])
       .slice(0, topK)
       .map(([id]) => id);
-  } else {
-    // Fallback: first topK chunks
-    const all = await redis.lrange(allKey(botId), 0, topK - 1);
-    candidateIds = all;
   }
 
-  if (candidateIds.length === 0) return [];
+  if (candidateIds.length === 0) {
+    // Thai text has no spaces — do substring matching across all chunks
+    const allIds = await redis.lrange(allKey(botId), 0, -1);
+    if (allIds.length === 0) return [];
 
-  // Fetch chunk JSON
+    const allRaws = await Promise.all(allIds.map((id) => redis.get(chunkKey(botId, id))));
+    const allChunks = allRaws
+      .filter((r): r is string => r !== null)
+      .map((r) => JSON.parse(r) as KBEntry);
+
+    const queryLower = query.toLowerCase();
+    const scored = allChunks.map((chunk) => {
+      const kwHits = chunk.keywords.filter((kw) => queryLower.includes(kw.toLowerCase())).length;
+      return { chunk, score: kwHits };
+    });
+
+    const matched = scored.filter((s) => s.score > 0).sort((a, b) => b.score - a.score);
+    // If nothing matched, return first topK as general context
+    return (matched.length > 0 ? matched : scored).slice(0, topK).map((s) => s.chunk);
+  }
+
+  // Fetch chunk JSON for keyword-indexed results
   const raws = await Promise.all(
     candidateIds.map((id) => redis.get(chunkKey(botId, id)))
   );
