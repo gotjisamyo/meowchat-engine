@@ -1,6 +1,6 @@
 {
   "name": "meowchat-engine",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "MeowChat AI Proxy Engine — memory-efficient LINE chatbot backend",
   "scripts": {
     "dev": "bun run --watch src/index.ts",
