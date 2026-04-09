@@ -130,5 +130,5 @@ export async function callGemini(
 
   const raw = result.response.text().trim();
   // Strip internal classification tags that should never reach the user
-  return raw.replace(/^(IN_SCOPE|OUT_OF_SCOPE|AMBIGUOUS)\s*/i, "").trim();
+  return raw.replace(/(IN_SCOPE|OUT_OF_SCOPE|AMBIGUOUS)\s*/gi, "").trim();
 }
