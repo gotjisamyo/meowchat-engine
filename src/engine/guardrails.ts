@@ -14,11 +14,14 @@ const ESCALATION_PATTERNS: RegExp[] = [
 
 export function shouldEscalate(
   message: string,
-  profile: CustomerProfile
+  profile: CustomerProfile,
+  customKeywords?: string[]
 ): boolean {
   const keywordHit = ESCALATION_PATTERNS.some((p) => p.test(message));
+  const msgLower = message.toLowerCase();
+  const customHit = customKeywords?.some((kw) => kw && msgLower.includes(kw.toLowerCase())) ?? false;
   const repeatedFrustration = profile.session.unansweredCount >= 3;
-  return keywordHit || repeatedFrustration;
+  return keywordHit || customHit || repeatedFrustration;
 }
 
 // ─── Guardrail instruction embedded in system prompt ─────────────────────────

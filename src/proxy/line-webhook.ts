@@ -297,7 +297,7 @@ export async function handleMessage(
   }
 
   // 3. Check escalation BEFORE calling LLM (saves a call)
-  if (shouldEscalate(event.text, profile)) {
+  if (shouldEscalate(event.text, profile, config.escalationKeywords)) {
     profile.escalationFlag = true;
     await saveProfile(profile);
     return { reply: buildEscalationMessage(config.botName), escalated: true };

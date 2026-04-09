@@ -22,6 +22,7 @@ export interface BotConfig {
   subscriptionStatus?: "trial" | "active" | "expired" | "grace";
   slipVerifyMode?: "off" | "auto" | "manual"; // payment slip detection via Gemini Vision
   quickReplies?: Array<{ label: string; text: string }>; // LINE quick reply buttons
+  escalationKeywords?: string[]; // custom merchant-defined escalation triggers
 }
 
 export interface KBEntry {

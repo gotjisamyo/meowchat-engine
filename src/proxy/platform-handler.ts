@@ -401,14 +401,23 @@ async function sendPush(userId: string, messages: Record<string, unknown>[], acc
 }
 
 async function sendReply(payload: object, accessToken: string): Promise<void> {
-  await fetch("https://api.line.me/v2/bot/message/reply", {
+  const body = JSON.stringify(payload);
+  const res = await fetch("https://api.line.me/v2/bot/message/reply", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${accessToken}`,
     },
-    body: JSON.stringify(payload),
+    body,
   });
+  if (!res.ok) {
+    const err = await res.text();
+    console.error(`[platform] reply failed ${res.status}: ${err}`);
+  } else {
+    const p = payload as { messages?: { type: string }[] };
+    const types = p.messages?.map((m) => m.type).join(",") ?? "?";
+    console.log(`[platform] reply OK types=[${types}]`);
+  }
 }
 
 // ─── Static responses for rich menu buttons ───────────────────────────────────
