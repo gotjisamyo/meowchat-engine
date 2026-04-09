@@ -278,7 +278,7 @@ async function processLineEvent(
 
 // ─── Core message handling pipeline ──────────────────────────────────────────
 
-async function handleMessage(
+export async function handleMessage(
   event: LineWebhookEvent,
   config: BotConfig
 ): Promise<{ reply: string; escalated: boolean }> {

@@ -108,15 +108,12 @@ app.post("/admin/bots/:botId/simulate", async (c) => {
   const { message } = (await c.req.json()) as { message: string };
   if (!message) return c.json({ error: "message required" }, 400);
 
-  const { assembleContext } = await import("./engine/context-assembler.js");
-  const { callGemini } = await import("./engine/gemini-client.js");
-  const { loadOrCreateProfile } = await import("./memory/customer-profile.js");
+  const { handleMessage } = await import("./proxy/line-webhook.js");
 
-  const profile = await loadOrCreateProfile("simulate_user", botId);
-  const payload = await assembleContext(config, profile, message);
-  const reply = await callGemini(payload, config.geminiApiKey);
+  const fakeEvent = { text: message, replyToken: "simulate", type: "message" as const };
+  const { reply, escalated } = await handleMessage(fakeEvent, config);
 
-  return c.json({ reply, botName: config.botName });
+  return c.json({ reply, escalated, botName: config.botName });
 });
 
 // ─── Start ────────────────────────────────────────────────────────────────────
