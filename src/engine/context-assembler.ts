@@ -111,7 +111,11 @@ export async function assembleContext(
     }
   }
 
-  const kbSnippet = kbChunks.map((e) => `[${e.topic}]\n${e.content}`).join("\n\n");
+  // Filter out template placeholder entries (content with [xxx] that wasn't filled in)
+  const PLACEHOLDER_RE = /\[[^\]]{1,20}\]/;
+  const filledChunks = kbChunks.filter((e) => !PLACEHOLDER_RE.test(e.content));
+
+  const kbSnippet = filledChunks.map((e) => `[${e.topic}]\n${e.content}`).join("\n\n");
   const kbBlock = buildKBBlock(kbSnippet);
 
   // 4. Customer profile block (~60–80 tokens)

@@ -129,6 +129,8 @@ export async function callGemini(
   const result = await chat.sendMessage(currentMessage);
 
   const raw = result.response.text().trim();
-  // Strip internal classification tags that should never reach the user
-  return raw.replace(/(IN_SCOPE|OUT_OF_SCOPE|AMBIGUOUS)\s*/gi, "").trim();
+  // Strip internal classification tags (with optional colon/whitespace) that should never reach the user
+  return raw.replace(/^(IN_SCOPE|OUT_OF_SCOPE|AMBIGUOUS)[:\s]*/gi, "")
+            .replace(/\b(IN_SCOPE|OUT_OF_SCOPE|AMBIGUOUS)\b[:\s]*/gi, "")
+            .trim();
 }
