@@ -96,6 +96,29 @@ app.post("/admin/bots/:botId/kb", async (c) => {
   return c.json({ ok: true, chunks: chunks.length, status: "indexing" });
 });
 
+// ─── Admin simulate: test bot reply without sending to LINE ──────────────────
+app.post("/admin/bots/:botId/simulate", async (c) => {
+  const apiKey = c.req.header("x-admin-key");
+  if (apiKey !== process.env.ADMIN_API_KEY) return c.json({ error: "unauthorized" }, 401);
+
+  const botId = c.req.param("botId");
+  const config = await getBotConfig(botId);
+  if (!config) return c.json({ error: "bot not found" }, 404);
+
+  const { message } = (await c.req.json()) as { message: string };
+  if (!message) return c.json({ error: "message required" }, 400);
+
+  const { assembleContext } = await import("./engine/context-assembler.js");
+  const { callGemini } = await import("./engine/gemini-client.js");
+  const { loadOrCreateProfile } = await import("./memory/customer-profile.js");
+
+  const profile = await loadOrCreateProfile("simulate_user", botId);
+  const payload = await assembleContext(config, profile, message);
+  const reply = await callGemini(payload, config.geminiApiKey);
+
+  return c.json({ reply, botName: config.botName });
+});
+
 // ─── Start ────────────────────────────────────────────────────────────────────
 
 const PORT = Number(process.env.PORT ?? 3100);
