@@ -128,5 +128,7 @@ export async function callGemini(
   const chat = model.startChat({ history });
   const result = await chat.sendMessage(currentMessage);
 
-  return result.response.text().trim();
+  const raw = result.response.text().trim();
+  // Strip internal classification tags that should never reach the user
+  return raw.replace(/^(IN_SCOPE|OUT_OF_SCOPE|AMBIGUOUS)\s*/i, "").trim();
 }
