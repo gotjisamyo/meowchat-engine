@@ -1,0 +1,6 @@
+# dist/ is pre-compiled and committed — skip tsc at build time
+[phases.install]
+cmds = ["npm install --omit=dev"]
+
+[phases.build]
+cmds = []
