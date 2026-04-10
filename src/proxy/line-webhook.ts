@@ -39,7 +39,8 @@ async function replyToLine(
   replyToken: string,
   message: string,
   accessToken: string,
-  quickReplies?: Array<{ label: string; text: string }>
+  quickReplies?: Array<{ label: string; text: string }>,
+  brandingText?: string
 ): Promise<void> {
   const textMessage: Record<string, unknown> = { type: "text", text: message };
 
@@ -56,16 +57,18 @@ async function replyToLine(
     };
   }
 
+  const messages: Record<string, unknown>[] = [textMessage];
+  if (brandingText) {
+    messages.push({ type: "text", text: brandingText });
+  }
+
   await fetch("https://api.line.me/v2/bot/message/reply", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${accessToken}`,
     },
-    body: JSON.stringify({
-      replyToken,
-      messages: [textMessage],
-    }),
+    body: JSON.stringify({ replyToken, messages }),
   });
 }
 
@@ -266,9 +269,10 @@ async function processLineEvent(
     channel: "line",
   };
 
-  const { reply, escalated } = await handleMessage(webhookEvent, config);
+  const { reply, escalated, showBranding } = await handleMessage(webhookEvent, config);
   const qr = !escalated && config.quickReplies?.length ? config.quickReplies : undefined;
-  await replyToLine(replyToken, reply, config.lineChannelAccessToken, qr);
+  const branding = showBranding ? "🐱 ขับเคลื่อนโดย MeowChat" : undefined;
+  await replyToLine(replyToken, reply, config.lineChannelAccessToken, qr, branding);
 
   // Fire-and-forget: log conversation to backend for merchant dashboard
   logConversationToBackend(config.botId, userId, userText, reply, escalated).catch(
@@ -281,7 +285,7 @@ async function processLineEvent(
 export async function handleMessage(
   event: LineWebhookEvent,
   config: BotConfig
-): Promise<{ reply: string; escalated: boolean }> {
+): Promise<{ reply: string; escalated: boolean; showBranding: boolean }> {
   const startMs = Date.now();
 
   // 1. Load or create customer profile
@@ -300,7 +304,7 @@ export async function handleMessage(
   if (shouldEscalate(event.text, profile, config.escalationKeywords)) {
     profile.escalationFlag = true;
     await saveProfile(profile);
-    return { reply: buildEscalationMessage(config.botName), escalated: true };
+    return { reply: buildEscalationMessage(config.botName), escalated: true, showBranding: false };
   }
 
   // 4. Assemble context BEFORE adding current turn — window must not include
@@ -319,10 +323,14 @@ export async function handleMessage(
     return {
       reply: `ขออภัยนะคะ 🐱 บริการชั่วคราวหยุดทำงาน\nเจ้าของร้านสามารถต่ออายุได้ที่ my.meowchat.store`,
       escalated: false,
+      showBranding: false,
     };
   }
 
-  // 8. Call Gemini
+  // 8. Check if this is the first turn of the session (before addTurn increments count)
+  const isFirstTurn = profile.session.turnCount === 0;
+
+  // 9. Call Gemini
   let reply: string;
   try {
     reply = await callGemini(payload, config.geminiApiKey);
@@ -331,23 +339,24 @@ export async function handleMessage(
     reply = `ขออภัยนะคะ ระบบขัดข้องชั่วคราว กรุณาลองใหม่อีกครั้งค่ะ`;
   }
 
-  // 9. Add both turns to buffer (without branding — keeps history clean for LLM)
+  // 10. Add both turns to buffer (clean, no branding mixed in)
   await addTurn(profile, "user", event.text);
   await addTurn(profile, "assistant", reply);
 
-  // 10. Append MeowChat branding AFTER buffering (trial/free plans only)
-  if (config.showBranding !== false && config.subscriptionStatus !== "active") {
-    reply += `\n\n🐱 ขับเคลื่อนโดย MeowChat`;
-  }
+  // 11. Show branding as a separate bubble on first turn only (trial/free plans)
+  const showBranding =
+    isFirstTurn &&
+    config.showBranding !== false &&
+    config.subscriptionStatus !== "active";
 
-  // 11. Passive preference extraction (simple heuristic, non-blocking)
+  // 12. Passive preference extraction (simple heuristic, non-blocking)
   extractPreferences(event.text, profile);
   await saveProfile(profile);
 
   const latencyMs = Date.now() - startMs;
   console.log(`[engine] done in ${latencyMs}ms`);
 
-  return { reply, escalated: false };
+  return { reply, escalated: false, showBranding };
 }
 
 // ─── Log conversation to backend (for merchant dashboard) ────────────────────
