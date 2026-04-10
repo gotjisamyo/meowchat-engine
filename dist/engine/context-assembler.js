@@ -60,6 +60,17 @@ function buildSystemPrompt(params) {
     if (memorySummary) {
         sections.push(`## บริบทการสนทนาก่อนหน้า (สรุป)\n${memorySummary}`);
     }
+    // Delivery address rules
+    const hasAddress = !!params.deliveryAddress;
+    sections.push(`## ที่อยู่จัดส่ง
+${hasAddress
+        ? `ที่อยู่ที่บันทึกไว้: "${params.deliveryAddress}"
+- เมื่อลูกค้าสั่งสินค้า ให้ทวนที่อยู่นี้ทุกครั้ง เช่น "จัดส่งที่ [ที่อยู่เดิม] เหมือนเดิมเลยไหมคะ?"
+- ถ้าลูกค้าบอกเปลี่ยน ให้รับที่อยู่ใหม่ ทวนยืนยัน แล้วฝัง [SAVE_ADDRESS: ที่อยู่ใหม่] ต่อท้ายข้อความ`
+        : `ลูกค้ายังไม่มีที่อยู่จัดส่ง
+- เมื่อลูกค้าสั่งสินค้า ให้ถามที่อยู่ก่อนเสมอ
+- เมื่อได้ที่อยู่แล้ว ให้ทวน เช่น "ทวนที่อยู่: [ที่อยู่] ถูกต้องไหมคะ?"
+- เมื่อลูกค้ายืนยันแล้ว ให้ฝัง [SAVE_ADDRESS: ที่อยู่] ต่อท้ายข้อความ (จะถูกลบก่อนส่ง)`}`);
     // Always-on rules
     sections.push(`## กฎสำคัญ
 1. ตอบภาษาไทยเสมอ เว้นแต่ลูกค้าพิมพ์ภาษาอังกฤษก่อน
@@ -120,6 +131,7 @@ async function assembleContext(config, customer, userMessage) {
         profileBlock,
         memorySummary,
         kbBlock,
+        deliveryAddress: customer.deliveryAddress,
     });
     // 7. Raw window (last 6 turns, ~250 tokens)
     const windowMessages = (0, conversation_buffer_js_1.getWindow)(customer);

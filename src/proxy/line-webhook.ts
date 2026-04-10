@@ -393,17 +393,24 @@ export async function handleMessage(
     reply = `ขออภัยนะคะ ระบบขัดข้องชั่วคราว กรุณาลองใหม่อีกครั้งค่ะ`;
   }
 
-  // 10. Add both turns to buffer (clean, no branding mixed in)
+  // 10. Parse and save delivery address signal from Gemini reply
+  const addressMatch = reply.match(/\[SAVE_ADDRESS:\s*(.+?)\]/);
+  if (addressMatch) {
+    profile.deliveryAddress = addressMatch[1].trim();
+    reply = reply.replace(/\s*\[SAVE_ADDRESS:\s*.+?\]/, "").trim();
+  }
+
+  // 11. Add both turns to buffer (clean, no branding mixed in)
   await addTurn(profile, "user", event.text);
   await addTurn(profile, "assistant", reply);
 
-  // 11. Show branding as a separate bubble on first turn only (trial/free plans)
+  // 12. Show branding as a separate bubble on first turn only (trial/free plans)
   const showBranding =
     isFirstTurn &&
     config.showBranding !== false &&
     config.subscriptionStatus !== "active";
 
-  // 12. Passive preference extraction (simple heuristic, non-blocking)
+  // 13. Passive preference extraction (simple heuristic, non-blocking)
   extractPreferences(event.text, profile);
   await saveProfile(profile);
 

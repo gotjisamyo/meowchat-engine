@@ -46,6 +46,7 @@ export interface CustomerProfile {
     summary: string;         // compressed: "เผ็ดน้อย แพ้กุ้ง"
   };
   orderSummary: string;      // "สั่งบ่อย: ข้าวผัด, น้ำมะนาว (3 ครั้ง)"
+  deliveryAddress?: string;  // confirmed delivery address for this LINE user
   tags: string[];            // ["vip", "repeat_buyer"]
   session: ConversationSession;
   escalationFlag: boolean;

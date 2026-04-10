@@ -76,6 +76,8 @@ function buildProfileBlock(profile) {
         parts.push(`ความชอบ: ${profile.preferences.summary}`);
     if (profile.orderSummary)
         parts.push(`ประวัติ: ${profile.orderSummary}`);
+    if (profile.deliveryAddress)
+        parts.push(`ที่อยู่จัดส่ง: ${profile.deliveryAddress}`);
     if (profile.tags.includes("vip"))
         parts.push("สถานะ: VIP");
     return parts.length > 0
