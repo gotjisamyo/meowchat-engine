@@ -55,7 +55,7 @@ app.get("/health", async (c) => {
         redisOk = true;
     }
     catch { }
-    return c.json({ ok: true, redis: redisOk, ts: new Date().toISOString(), v: "escalation-kw-v1" });
+    return c.json({ ok: true, redis: redisOk, ts: new Date().toISOString(), v: "branding-flex-v2" });
 });
 // ─── LINE OA webhook (per bot) ────────────────────────────────────────────────
 // Vercel/Railway: set env LINE_CHANNEL_SECRET, LINE_CHANNEL_ACCESS_TOKEN per bot
