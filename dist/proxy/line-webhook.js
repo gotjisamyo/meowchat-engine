@@ -28,8 +28,61 @@ function verifyLineSignature(body, signature, secret) {
         return false;
     return node_crypto_1.default.timingSafeEqual(sigBuf, expBuf);
 }
+// ─── MeowChat branding Flex Message (dark navy + gold, premium look) ──────────
+function buildBrandingBubble() {
+    return {
+        type: "flex",
+        altText: "🐱 ขับเคลื่อนโดย MeowChat",
+        contents: {
+            type: "bubble",
+            size: "micro",
+            body: {
+                type: "box",
+                layout: "horizontal",
+                backgroundColor: "#1C1B33",
+                cornerRadius: "16px",
+                paddingTop: "lg",
+                paddingBottom: "lg",
+                paddingStart: "lg",
+                paddingEnd: "lg",
+                alignItems: "center",
+                spacing: "md",
+                contents: [
+                    {
+                        type: "text",
+                        text: "🐱",
+                        size: "xl",
+                        flex: 0,
+                    },
+                    {
+                        type: "box",
+                        layout: "vertical",
+                        flex: 1,
+                        spacing: "none",
+                        contents: [
+                            {
+                                type: "text",
+                                text: "POWERED BY",
+                                color: "#7878A8",
+                                size: "xxs",
+                                weight: "bold",
+                            },
+                            {
+                                type: "text",
+                                text: "MeowChat",
+                                color: "#E8C56B",
+                                size: "md",
+                                weight: "bold",
+                            },
+                        ],
+                    },
+                ],
+            },
+        },
+    };
+}
 // ─── Reply to LINE via Messaging API ─────────────────────────────────────────
-async function replyToLine(replyToken, message, accessToken, quickReplies) {
+async function replyToLine(replyToken, message, accessToken, quickReplies, showBranding) {
     const textMessage = { type: "text", text: message };
     if (quickReplies && quickReplies.length > 0) {
         textMessage.quickReply = {
@@ -43,16 +96,17 @@ async function replyToLine(replyToken, message, accessToken, quickReplies) {
             })),
         };
     }
+    const messages = [textMessage];
+    if (showBranding) {
+        messages.push(buildBrandingBubble());
+    }
     await fetch("https://api.line.me/v2/bot/message/reply", {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${accessToken}`,
         },
-        body: JSON.stringify({
-            replyToken,
-            messages: [textMessage],
-        }),
+        body: JSON.stringify({ replyToken, messages }),
     });
 }
 // ─── Main webhook handler ─────────────────────────────────────────────────────
@@ -217,9 +271,9 @@ async function processLineEvent(event, config) {
         text: userText,
         channel: "line",
     };
-    const { reply, escalated } = await handleMessage(webhookEvent, config);
+    const { reply, escalated, showBranding } = await handleMessage(webhookEvent, config);
     const qr = !escalated && config.quickReplies?.length ? config.quickReplies : undefined;
-    await replyToLine(replyToken, reply, config.lineChannelAccessToken, qr);
+    await replyToLine(replyToken, reply, config.lineChannelAccessToken, qr, showBranding);
     // Fire-and-forget: log conversation to backend for merchant dashboard
     logConversationToBackend(config.botId, userId, userText, reply, escalated).catch((e) => console.warn("[engine] conversation log failed:", e));
 }
@@ -236,7 +290,7 @@ async function handleMessage(event, config) {
     if ((0, guardrails_js_1.shouldEscalate)(event.text, profile, config.escalationKeywords)) {
         profile.escalationFlag = true;
         await (0, customer_profile_js_1.saveProfile)(profile);
-        return { reply: (0, guardrails_js_1.buildEscalationMessage)(config.botName), escalated: true };
+        return { reply: (0, guardrails_js_1.buildEscalationMessage)(config.botName), escalated: true, showBranding: false };
     }
     // 4. Assemble context BEFORE adding current turn — window must not include
     //    the current user message (assembleContext appends it itself)
@@ -250,9 +304,12 @@ async function handleMessage(event, config) {
         return {
             reply: `ขออภัยนะคะ 🐱 บริการชั่วคราวหยุดทำงาน\nเจ้าของร้านสามารถต่ออายุได้ที่ my.meowchat.store`,
             escalated: false,
+            showBranding: false,
         };
     }
-    // 8. Call Gemini
+    // 8. Check if this is the first turn of the session (before addTurn increments count)
+    const isFirstTurn = profile.session.turnCount === 0;
+    // 9. Call Gemini
     let reply;
     try {
         reply = await (0, gemini_client_js_1.callGemini)(payload, config.geminiApiKey);
@@ -261,19 +318,19 @@ async function handleMessage(event, config) {
         console.error("[engine] Claude error:", err);
         reply = `ขออภัยนะคะ ระบบขัดข้องชั่วคราว กรุณาลองใหม่อีกครั้งค่ะ`;
     }
-    // 9. Add both turns to buffer (without branding — keeps history clean for LLM)
+    // 10. Add both turns to buffer (clean, no branding mixed in)
     await (0, conversation_buffer_js_1.addTurn)(profile, "user", event.text);
     await (0, conversation_buffer_js_1.addTurn)(profile, "assistant", reply);
-    // 10. Append MeowChat branding AFTER buffering (trial/free plans only)
-    if (config.showBranding !== false && config.subscriptionStatus !== "active") {
-        reply += `\n\n🐱 ขับเคลื่อนโดย MeowChat`;
-    }
-    // 11. Passive preference extraction (simple heuristic, non-blocking)
+    // 11. Show branding as a separate bubble on first turn only (trial/free plans)
+    const showBranding = isFirstTurn &&
+        config.showBranding !== false &&
+        config.subscriptionStatus !== "active";
+    // 12. Passive preference extraction (simple heuristic, non-blocking)
     extractPreferences(event.text, profile);
     await (0, customer_profile_js_1.saveProfile)(profile);
     const latencyMs = Date.now() - startMs;
     console.log(`[engine] done in ${latencyMs}ms`);
-    return { reply, escalated: false };
+    return { reply, escalated: false, showBranding };
 }
 // ─── Log conversation to backend (for merchant dashboard) ────────────────────
 async function logConversationToBackend(botId, lineUserId, userText, botReply, escalated = false) {
