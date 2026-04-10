@@ -33,6 +33,61 @@ function verifyLineSignature(
   return crypto.timingSafeEqual(sigBuf, expBuf);
 }
 
+// ─── MeowChat branding Flex Message (dark navy + gold, premium look) ──────────
+
+function buildBrandingBubble(): Record<string, unknown> {
+  return {
+    type: "flex",
+    altText: "🐱 ขับเคลื่อนโดย MeowChat",
+    contents: {
+      type: "bubble",
+      size: "micro",
+      body: {
+        type: "box",
+        layout: "horizontal",
+        backgroundColor: "#1C1B33",
+        cornerRadius: "16px",
+        paddingTop: "lg",
+        paddingBottom: "lg",
+        paddingStart: "lg",
+        paddingEnd: "lg",
+        alignItems: "center",
+        spacing: "md",
+        contents: [
+          {
+            type: "text",
+            text: "🐱",
+            size: "xl",
+            flex: 0,
+          },
+          {
+            type: "box",
+            layout: "vertical",
+            flex: 1,
+            spacing: "none",
+            contents: [
+              {
+                type: "text",
+                text: "POWERED BY",
+                color: "#7878A8",
+                size: "xxs",
+                weight: "bold",
+              },
+              {
+                type: "text",
+                text: "MeowChat",
+                color: "#E8C56B",
+                size: "md",
+                weight: "bold",
+              },
+            ],
+          },
+        ],
+      },
+    },
+  };
+}
+
 // ─── Reply to LINE via Messaging API ─────────────────────────────────────────
 
 async function replyToLine(
@@ -40,7 +95,7 @@ async function replyToLine(
   message: string,
   accessToken: string,
   quickReplies?: Array<{ label: string; text: string }>,
-  brandingText?: string
+  showBranding?: boolean
 ): Promise<void> {
   const textMessage: Record<string, unknown> = { type: "text", text: message };
 
@@ -58,8 +113,8 @@ async function replyToLine(
   }
 
   const messages: Record<string, unknown>[] = [textMessage];
-  if (brandingText) {
-    messages.push({ type: "text", text: brandingText });
+  if (showBranding) {
+    messages.push(buildBrandingBubble());
   }
 
   await fetch("https://api.line.me/v2/bot/message/reply", {
@@ -271,8 +326,7 @@ async function processLineEvent(
 
   const { reply, escalated, showBranding } = await handleMessage(webhookEvent, config);
   const qr = !escalated && config.quickReplies?.length ? config.quickReplies : undefined;
-  const branding = showBranding ? "🐱 ขับเคลื่อนโดย MeowChat" : undefined;
-  await replyToLine(replyToken, reply, config.lineChannelAccessToken, qr, branding);
+  await replyToLine(replyToken, reply, config.lineChannelAccessToken, qr, showBranding);
 
   // Fire-and-forget: log conversation to backend for merchant dashboard
   logConversationToBackend(config.botId, userId, userText, reply, escalated).catch(
