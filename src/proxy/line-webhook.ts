@@ -205,6 +205,32 @@ async function downloadLineImage(
   }
 }
 
+// ─── Create order from bot via backend internal API ──────────────────────────
+
+async function notifyBotOrder(
+  botId: string,
+  lineUserId: string,
+  items: Array<{ name: string; qty: number }>,
+  note: string
+): Promise<{ ok: boolean; orderNumber?: string; items?: Array<{ productName: string; quantity: number; price: number }>; total?: number; error?: string }> {
+  const backendUrl = process.env.BACKEND_URL;
+  const internalKey = process.env.INTERNAL_API_KEY;
+  if (!backendUrl || !internalKey) return { ok: false, error: "not configured" };
+
+  try {
+    const res = await fetch(`${backendUrl}/api/internal/bot-order`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-internal-key": internalKey },
+      body: JSON.stringify({ botId, lineUserId, items, note }),
+    });
+    const data = await res.json() as Record<string, unknown>;
+    if (!res.ok) return { ok: false, error: (data.error as string) ?? "unknown" };
+    return { ok: true, orderNumber: data.orderNumber as string, items: data.items as Array<{ productName: string; quantity: number; price: number }>, total: data.total as number };
+  } catch (e) {
+    return { ok: false, error: String(e) };
+  }
+}
+
 // ─── Notify backend to create a slip order ───────────────────────────────────
 
 async function notifySlipOrder(
@@ -324,7 +350,27 @@ async function processLineEvent(
     channel: "line",
   };
 
-  const { reply, escalated, showBranding } = await handleMessage(webhookEvent, config);
+  let { reply, escalated, showBranding } = await handleMessage(webhookEvent, config);
+
+  // ─── Parse [CREATE_ORDER:...] signal from reply ───────────────────────────
+  const orderMatch = reply.match(/\[CREATE_ORDER:\s*(\{[\s\S]*?\})\]/);
+  if (orderMatch) {
+    reply = reply.replace(/\s*\[CREATE_ORDER:\s*\{[\s\S]*?\}\]/, "").trim();
+    try {
+      const payload = JSON.parse(orderMatch[1]) as { items: Array<{ name: string; qty: number }>; note?: string };
+      const result = await notifyBotOrder(config.botId, userId, payload.items ?? [], payload.note ?? "");
+      if (result.ok && result.orderNumber) {
+        const totalText = result.total ? `฿${result.total.toLocaleString()}` : "";
+        reply += `\n\n📋 หมายเลขออเดอร์: ${result.orderNumber}${totalText ? `\n💰 ยอดรวม: ${totalText}` : ""}\nร้านค้าได้รับออเดอร์แล้ว รอการยืนยันจากร้านค่ะ 🐱`;
+      } else if (!result.ok) {
+        console.warn(`[engine] bot-order failed: ${result.error}`);
+        reply += `\n\n⚠️ ขออภัย บันทึกออเดอร์ไม่สำเร็จ กรุณาติดต่อร้านค้าโดยตรงค่ะ`;
+      }
+    } catch (e) {
+      console.warn("[engine] CREATE_ORDER parse error:", e);
+    }
+  }
+
   const qr = !escalated && config.quickReplies?.length ? config.quickReplies : undefined;
   await replyToLine(replyToken, reply, config.lineChannelAccessToken, qr, showBranding);
 
