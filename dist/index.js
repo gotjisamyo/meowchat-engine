@@ -128,7 +128,7 @@ app.post("/admin/bots/:botId/simulate", async (c) => {
     const { message } = (await c.req.json());
     if (!message)
         return c.json({ error: "message required" }, 400);
-    const { handleMessage } = await Promise.resolve().then(() => __importStar(require("./proxy/line-webhook.js")));
+    const { handleMessage, processReplySignals } = await Promise.resolve().then(() => __importStar(require("./proxy/line-webhook.js")));
     const fakeEvent = {
         botId: config.botId,
         userId: "simulate-user",
@@ -136,7 +136,10 @@ app.post("/admin/bots/:botId/simulate", async (c) => {
         text: message,
         channel: "line",
     };
-    const { reply, escalated } = await handleMessage(fakeEvent, config);
+    const { reply: rawReply, escalated } = await handleMessage(fakeEvent, config);
+    // Process signals (order/booking creation) + strip SHOW_PRODUCT
+    let reply = await processReplySignals(rawReply, config.botId, "simulate-user");
+    reply = reply.replace(/\[SHOW_PRODUCT:\s*[^\]]+\]/g, "").trim();
     return c.json({ reply, escalated, botName: config.botName });
 });
 // ─── Start ────────────────────────────────────────────────────────────────────

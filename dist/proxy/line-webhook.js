@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.lineWebhookHandler = lineWebhookHandler;
+exports.processReplySignals = processReplySignals;
 exports.handleMessage = handleMessage;
 const node_crypto_1 = __importDefault(require("node:crypto"));
 const customer_profile_js_1 = require("../memory/customer-profile.js");
@@ -82,7 +83,65 @@ function buildBrandingBubble() {
     };
 }
 // ─── Reply to LINE via Messaging API ─────────────────────────────────────────
-async function replyToLine(replyToken, message, accessToken, quickReplies, showBranding) {
+// ─── Product image lookup + Flex Message builder ─────────────────────────────
+async function lookupProductImage(botId, name) {
+    const backendUrl = process.env.BACKEND_URL;
+    const internalKey = process.env.INTERNAL_API_KEY;
+    if (!backendUrl || !internalKey)
+        return null;
+    try {
+        const res = await fetch(`${backendUrl}/api/internal/product-image?botId=${encodeURIComponent(botId)}&name=${encodeURIComponent(name)}`, { headers: { "x-internal-key": internalKey } });
+        if (!res.ok)
+            return null;
+        return await res.json();
+    }
+    catch {
+        return null;
+    }
+}
+function buildProductBubble(product) {
+    const priceText = Number(product.price) > 0 ? `฿${Number(product.price).toLocaleString()}` : "ฟรี";
+    return {
+        type: "bubble",
+        size: "kilo",
+        ...(product.imageUrl ? {
+            hero: {
+                type: "image",
+                url: product.imageUrl,
+                size: "full",
+                aspectRatio: "20:13",
+                aspectMode: "cover",
+            },
+        } : {}),
+        body: {
+            type: "box",
+            layout: "vertical",
+            paddingAll: "16px",
+            spacing: "sm",
+            backgroundColor: "#12121A",
+            contents: [
+                { type: "text", text: product.name, weight: "bold", size: "md", color: "#FFFFFF", wrap: true },
+                { type: "text", text: priceText, size: "xl", weight: "bold", color: "#FF6B35" },
+            ],
+        },
+        footer: {
+            type: "box",
+            layout: "vertical",
+            paddingAll: "12px",
+            backgroundColor: "#12121A",
+            contents: [
+                {
+                    type: "button",
+                    style: "primary",
+                    color: "#FF6B35",
+                    height: "sm",
+                    action: { type: "message", label: "🛒 สั่งเลย", text: `สั่ง${product.name}เลยค่ะ` },
+                },
+            ],
+        },
+    };
+}
+async function replyToLine(replyToken, message, accessToken, quickReplies, showBranding, extraMessages) {
     const textMessage = { type: "text", text: message };
     if (quickReplies && quickReplies.length > 0) {
         textMessage.quickReply = {
@@ -97,6 +156,9 @@ async function replyToLine(replyToken, message, accessToken, quickReplies, showB
         };
     }
     const messages = [textMessage];
+    if (extraMessages) {
+        messages.push(...extraMessages);
+    }
     if (showBranding) {
         messages.push(buildBrandingBubble());
     }
@@ -165,6 +227,94 @@ async function downloadLineImage(messageId, accessToken) {
     }
     catch {
         return null;
+    }
+}
+// ─── Parse and execute bot signals from LLM reply ────────────────────────────
+// Shared between processLineEvent (real LINE) and simulate endpoint (backend proxy)
+async function processReplySignals(rawReply, botId, userId) {
+    let reply = rawReply;
+    // [CREATE_ORDER:...] — create order in backend
+    const orderMatch = reply.match(/\[CREATE_ORDER:\s*(\{[\s\S]*?\})\]/);
+    if (orderMatch) {
+        reply = reply.replace(/\s*\[CREATE_ORDER:\s*\{[\s\S]*?\}\]/, "").trim();
+        try {
+            const payload = JSON.parse(orderMatch[1]);
+            const result = await notifyBotOrder(botId, userId, payload.items ?? [], payload.note ?? "");
+            if (result.ok && result.orderNumber) {
+                const totalText = result.total ? `฿${result.total.toLocaleString()}` : "";
+                reply += `\n\n📋 หมายเลขออเดอร์: ${result.orderNumber}${totalText ? `\n💰 ยอดรวม: ${totalText}` : ""}\nร้านค้าได้รับออเดอร์แล้ว รอการยืนยันจากร้านค่ะ 🐱`;
+            }
+            else if (!result.ok) {
+                console.warn(`[engine] bot-order failed: ${result.error}`);
+                reply += `\n\n⚠️ ขออภัย บันทึกออเดอร์ไม่สำเร็จ กรุณาติดต่อร้านค้าโดยตรงค่ะ`;
+            }
+        }
+        catch (e) {
+            console.warn("[engine] CREATE_ORDER parse error:", e);
+        }
+    }
+    // [CREATE_BOOKING:...] — create booking in backend
+    const bookingMatch = reply.match(/\[CREATE_BOOKING:\s*(\{[\s\S]*?\})\]/);
+    if (bookingMatch) {
+        reply = reply.replace(/\s*\[CREATE_BOOKING:\s*\{[\s\S]*?\}\]/, "").trim();
+        try {
+            const payload = JSON.parse(bookingMatch[1]);
+            const result = await notifyBotBooking(botId, userId, payload.service ?? "", payload.datetime ?? "", payload.note ?? "");
+            if (result.ok) {
+                const dateText = payload.datetime ? `\n📅 วัน/เวลา: ${payload.datetime}` : "";
+                reply += `\n\n✅ รับนัดหมายแล้วค่ะ!\n🎯 บริการ: ${payload.service}${dateText}\nร้านค้าจะยืนยันนัดหมายกลับหาคุณค่ะ 🐱`;
+            }
+            else {
+                console.warn(`[engine] bot-booking failed: ${result.error}`);
+                reply += `\n\n⚠️ ขออภัย บันทึกนัดหมายไม่สำเร็จ กรุณาติดต่อร้านค้าโดยตรงค่ะ`;
+            }
+        }
+        catch (e) {
+            console.warn("[engine] CREATE_BOOKING parse error:", e);
+        }
+    }
+    return reply;
+}
+// ─── Create order from bot via backend internal API ──────────────────────────
+async function notifyBotOrder(botId, lineUserId, items, note) {
+    const backendUrl = process.env.BACKEND_URL;
+    const internalKey = process.env.INTERNAL_API_KEY;
+    if (!backendUrl || !internalKey)
+        return { ok: false, error: "not configured" };
+    try {
+        const res = await fetch(`${backendUrl}/api/internal/bot-order`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-internal-key": internalKey },
+            body: JSON.stringify({ botId, lineUserId, items, note }),
+        });
+        const data = await res.json();
+        if (!res.ok)
+            return { ok: false, error: data.error ?? "unknown" };
+        return { ok: true, orderNumber: data.orderNumber, items: data.items, total: data.total };
+    }
+    catch (e) {
+        return { ok: false, error: String(e) };
+    }
+}
+// ─── Notify backend to create a booking ──────────────────────────────────────
+async function notifyBotBooking(botId, lineUserId, service, datetime, note) {
+    const backendUrl = process.env.BACKEND_URL;
+    const internalKey = process.env.INTERNAL_API_KEY;
+    if (!backendUrl || !internalKey)
+        return { ok: false, error: "not configured" };
+    try {
+        const res = await fetch(`${backendUrl}/api/internal/bot-booking`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-internal-key": internalKey },
+            body: JSON.stringify({ botId, lineUserId, service, datetime, note }),
+        });
+        const data = await res.json();
+        if (!res.ok)
+            return { ok: false, error: data.error ?? "unknown" };
+        return { ok: true, bookingId: data.bookingId };
+    }
+    catch (e) {
+        return { ok: false, error: String(e) };
     }
 }
 // ─── Notify backend to create a slip order ───────────────────────────────────
@@ -271,9 +421,30 @@ async function processLineEvent(event, config) {
         text: userText,
         channel: "line",
     };
-    const { reply, escalated, showBranding } = await handleMessage(webhookEvent, config);
+    let { reply, escalated, showBranding } = await handleMessage(webhookEvent, config);
+    // ─── Process bot signals (CREATE_ORDER, CREATE_BOOKING, strip SHOW_PRODUCT) ─
+    reply = await processReplySignals(reply, config.botId, userId);
+    // ─── Parse remaining [SHOW_PRODUCT:...] → LINE Flex bubbles ──────────────
+    const productNames = [];
+    reply = reply.replace(/\[SHOW_PRODUCT:\s*([^\]]+)\]/g, (_, name) => {
+        productNames.push(name.trim());
+        return "";
+    }).trim();
+    const flexMessages = [];
+    if (productNames.length > 0) {
+        const products = await Promise.all(productNames.slice(0, 3).map((n) => lookupProductImage(config.botId, n)));
+        const bubbles = products
+            .filter((p) => p !== null && !!p.imageUrl)
+            .map(buildProductBubble);
+        if (bubbles.length === 1) {
+            flexMessages.push({ type: "flex", altText: `รายละเอียด: ${bubbles.length > 0 ? productNames[0] : "สินค้า"}`, contents: bubbles[0] });
+        }
+        else if (bubbles.length > 1) {
+            flexMessages.push({ type: "flex", altText: "รายละเอียดสินค้า", contents: { type: "carousel", contents: bubbles } });
+        }
+    }
     const qr = !escalated && config.quickReplies?.length ? config.quickReplies : undefined;
-    await replyToLine(replyToken, reply, config.lineChannelAccessToken, qr, showBranding);
+    await replyToLine(replyToken, reply, config.lineChannelAccessToken, qr, showBranding, flexMessages.length > 0 ? flexMessages : undefined);
     // Fire-and-forget: log conversation to backend for merchant dashboard
     logConversationToBackend(config.botId, userId, userText, reply, escalated).catch((e) => console.warn("[engine] conversation log failed:", e));
 }

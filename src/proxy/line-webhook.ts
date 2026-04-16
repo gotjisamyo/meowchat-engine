@@ -271,6 +271,57 @@ async function downloadLineImage(
   }
 }
 
+// ─── Parse and execute bot signals from LLM reply ────────────────────────────
+// Shared between processLineEvent (real LINE) and simulate endpoint (backend proxy)
+
+export async function processReplySignals(
+  rawReply: string,
+  botId: string,
+  userId: string
+): Promise<string> {
+  let reply = rawReply;
+
+  // [CREATE_ORDER:...] — create order in backend
+  const orderMatch = reply.match(/\[CREATE_ORDER:\s*(\{[\s\S]*?\})\]/);
+  if (orderMatch) {
+    reply = reply.replace(/\s*\[CREATE_ORDER:\s*\{[\s\S]*?\}\]/, "").trim();
+    try {
+      const payload = JSON.parse(orderMatch[1]) as { items: Array<{ name: string; qty: number }>; note?: string };
+      const result = await notifyBotOrder(botId, userId, payload.items ?? [], payload.note ?? "");
+      if (result.ok && result.orderNumber) {
+        const totalText = result.total ? `฿${result.total.toLocaleString()}` : "";
+        reply += `\n\n📋 หมายเลขออเดอร์: ${result.orderNumber}${totalText ? `\n💰 ยอดรวม: ${totalText}` : ""}\nร้านค้าได้รับออเดอร์แล้ว รอการยืนยันจากร้านค่ะ 🐱`;
+      } else if (!result.ok) {
+        console.warn(`[engine] bot-order failed: ${result.error}`);
+        reply += `\n\n⚠️ ขออภัย บันทึกออเดอร์ไม่สำเร็จ กรุณาติดต่อร้านค้าโดยตรงค่ะ`;
+      }
+    } catch (e) {
+      console.warn("[engine] CREATE_ORDER parse error:", e);
+    }
+  }
+
+  // [CREATE_BOOKING:...] — create booking in backend
+  const bookingMatch = reply.match(/\[CREATE_BOOKING:\s*(\{[\s\S]*?\})\]/);
+  if (bookingMatch) {
+    reply = reply.replace(/\s*\[CREATE_BOOKING:\s*\{[\s\S]*?\}\]/, "").trim();
+    try {
+      const payload = JSON.parse(bookingMatch[1]) as { service: string; datetime?: string; note?: string };
+      const result = await notifyBotBooking(botId, userId, payload.service ?? "", payload.datetime ?? "", payload.note ?? "");
+      if (result.ok) {
+        const dateText = payload.datetime ? `\n📅 วัน/เวลา: ${payload.datetime}` : "";
+        reply += `\n\n✅ รับนัดหมายแล้วค่ะ!\n🎯 บริการ: ${payload.service}${dateText}\nร้านค้าจะยืนยันนัดหมายกลับหาคุณค่ะ 🐱`;
+      } else {
+        console.warn(`[engine] bot-booking failed: ${result.error}`);
+        reply += `\n\n⚠️ ขออภัย บันทึกนัดหมายไม่สำเร็จ กรุณาติดต่อร้านค้าโดยตรงค่ะ`;
+      }
+    } catch (e) {
+      console.warn("[engine] CREATE_BOOKING parse error:", e);
+    }
+  }
+
+  return reply;
+}
+
 // ─── Create order from bot via backend internal API ──────────────────────────
 
 async function notifyBotOrder(
@@ -445,45 +496,10 @@ async function processLineEvent(
 
   let { reply, escalated, showBranding } = await handleMessage(webhookEvent, config);
 
-  // ─── Parse [CREATE_ORDER:...] signal from reply ───────────────────────────
-  const orderMatch = reply.match(/\[CREATE_ORDER:\s*(\{[\s\S]*?\})\]/);
-  if (orderMatch) {
-    reply = reply.replace(/\s*\[CREATE_ORDER:\s*\{[\s\S]*?\}\]/, "").trim();
-    try {
-      const payload = JSON.parse(orderMatch[1]) as { items: Array<{ name: string; qty: number }>; note?: string };
-      const result = await notifyBotOrder(config.botId, userId, payload.items ?? [], payload.note ?? "");
-      if (result.ok && result.orderNumber) {
-        const totalText = result.total ? `฿${result.total.toLocaleString()}` : "";
-        reply += `\n\n📋 หมายเลขออเดอร์: ${result.orderNumber}${totalText ? `\n💰 ยอดรวม: ${totalText}` : ""}\nร้านค้าได้รับออเดอร์แล้ว รอการยืนยันจากร้านค่ะ 🐱`;
-      } else if (!result.ok) {
-        console.warn(`[engine] bot-order failed: ${result.error}`);
-        reply += `\n\n⚠️ ขออภัย บันทึกออเดอร์ไม่สำเร็จ กรุณาติดต่อร้านค้าโดยตรงค่ะ`;
-      }
-    } catch (e) {
-      console.warn("[engine] CREATE_ORDER parse error:", e);
-    }
-  }
+  // ─── Process bot signals (CREATE_ORDER, CREATE_BOOKING, strip SHOW_PRODUCT) ─
+  reply = await processReplySignals(reply, config.botId, userId);
 
-  // ─── Parse [CREATE_BOOKING:...] signal from reply ────────────────────────
-  const bookingMatch = reply.match(/\[CREATE_BOOKING:\s*(\{[\s\S]*?\})\]/);
-  if (bookingMatch) {
-    reply = reply.replace(/\s*\[CREATE_BOOKING:\s*\{[\s\S]*?\}\]/, "").trim();
-    try {
-      const payload = JSON.parse(bookingMatch[1]) as { service: string; datetime?: string; note?: string };
-      const result = await notifyBotBooking(config.botId, userId, payload.service ?? "", payload.datetime ?? "", payload.note ?? "");
-      if (result.ok) {
-        const dateText = payload.datetime ? `\n📅 วัน/เวลา: ${payload.datetime}` : "";
-        reply += `\n\n✅ รับนัดหมายแล้วค่ะ!\n🎯 บริการ: ${payload.service}${dateText}\nร้านค้าจะยืนยันนัดหมายกลับหาคุณค่ะ 🐱`;
-      } else {
-        console.warn(`[engine] bot-booking failed: ${result.error}`);
-        reply += `\n\n⚠️ ขออภัย บันทึกนัดหมายไม่สำเร็จ กรุณาติดต่อร้านค้าโดยตรงค่ะ`;
-      }
-    } catch (e) {
-      console.warn("[engine] CREATE_BOOKING parse error:", e);
-    }
-  }
-
-  // ─── Parse [SHOW_PRODUCT:...] signals — build LINE Flex bubbles ──────────
+  // ─── Parse remaining [SHOW_PRODUCT:...] → LINE Flex bubbles ──────────────
   const productNames: string[] = [];
   reply = reply.replace(/\[SHOW_PRODUCT:\s*([^\]]+)\]/g, (_, name: string) => {
     productNames.push(name.trim());
