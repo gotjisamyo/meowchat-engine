@@ -21,7 +21,13 @@ app.get("/health", async (c) => {
     await redis.ping();
     redisOk = true;
   } catch {}
-  return c.json({ ok: true, redis: redisOk, ts: new Date().toISOString(), v: "branding-flex-v2" });
+  return c.json({
+    ok: true,
+    redis: redisOk,
+    ts: new Date().toISOString(),
+    v: "order-signal-v3",
+    backendConfigured: !!(process.env.BACKEND_URL && process.env.INTERNAL_API_KEY),
+  });
 });
 
 // ─── LINE OA webhook (per bot) ────────────────────────────────────────────────

@@ -9,7 +9,11 @@ Set these in Railway dashboard → meowchat-engine service → Variables:
 | `LINE_CHANNEL_SECRET` | LINE OA channel secret | [LINE Developers Console](https://developers.line.biz) |
 | `LINE_CHANNEL_ACCESS_TOKEN` | LINE OA access token | LINE Developers Console |
 | `ADMIN_API_KEY` | Secret key for `/admin/bots` API | Generate any random string |
+| `BACKEND_URL` | **Required for orders/bookings/CRM** — backend API URL | `https://api.meowchat.store` |
+| `INTERNAL_API_KEY` | **Required for orders/bookings/CRM** — must match backend | Same value as backend `INTERNAL_API_KEY` env var |
 | `PORT` | HTTP port (Railway sets this automatically) | Leave unset — Railway injects it |
+
+> ⚠️ **`BACKEND_URL` + `INTERNAL_API_KEY` are critical.** Without them, bot orders, bookings, conversation logs, and CRM auto-populate will all fail silently.
 
 ## Railway Setup Steps
 
