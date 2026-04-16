@@ -274,6 +274,37 @@ async function downloadLineImage(
 // ─── Parse and execute bot signals from LLM reply ────────────────────────────
 // Shared between processLineEvent (real LINE) and simulate endpoint (backend proxy)
 
+// ─── Brace-counting JSON extractor (handles nested objects/arrays) ────────────
+function extractSignalBlock(text: string, signalName: string): { json: string; fullMatch: string } | null {
+  const prefix = `[${signalName}:`;
+  const idx = text.indexOf(prefix);
+  if (idx === -1) return null;
+
+  const start = text.indexOf("{", idx + prefix.length);
+  if (start === -1) return null;
+
+  let depth = 0;
+  let end = -1;
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === "{" || ch === "[") depth++;
+    else if (ch === "}" || ch === "]") {
+      depth--;
+      if (depth === 0) { end = i; break; }
+    }
+  }
+  if (end === -1) return null;
+
+  // Find the closing ] of the signal block
+  const closeIdx = text.indexOf("]", end);
+  if (closeIdx === -1) return null;
+
+  return {
+    json: text.slice(start, end + 1),
+    fullMatch: text.slice(idx, closeIdx + 1),
+  };
+}
+
 export async function processReplySignals(
   rawReply: string,
   botId: string,
@@ -282,11 +313,11 @@ export async function processReplySignals(
   let reply = rawReply;
 
   // [CREATE_ORDER:...] — create order in backend
-  const orderMatch = reply.match(/\[CREATE_ORDER:\s*(\{[\s\S]*?\})\]/);
-  if (orderMatch) {
-    reply = reply.replace(/\s*\[CREATE_ORDER:\s*\{[\s\S]*?\}\]/, "").trim();
+  const orderBlock = extractSignalBlock(reply, "CREATE_ORDER");
+  if (orderBlock) {
+    reply = reply.replace(orderBlock.fullMatch, "").trim();
     try {
-      const payload = JSON.parse(orderMatch[1]) as { items: Array<{ name: string; qty: number }>; note?: string };
+      const payload = JSON.parse(orderBlock.json) as { items: Array<{ name: string; qty: number }>; note?: string };
       const result = await notifyBotOrder(botId, userId, payload.items ?? [], payload.note ?? "");
       if (result.ok && result.orderNumber) {
         const totalText = result.total ? `฿${result.total.toLocaleString()}` : "";
@@ -301,11 +332,11 @@ export async function processReplySignals(
   }
 
   // [CREATE_BOOKING:...] — create booking in backend
-  const bookingMatch = reply.match(/\[CREATE_BOOKING:\s*(\{[\s\S]*?\})\]/);
-  if (bookingMatch) {
-    reply = reply.replace(/\s*\[CREATE_BOOKING:\s*\{[\s\S]*?\}\]/, "").trim();
+  const bookingBlock = extractSignalBlock(reply, "CREATE_BOOKING");
+  if (bookingBlock) {
+    reply = reply.replace(bookingBlock.fullMatch, "").trim();
     try {
-      const payload = JSON.parse(bookingMatch[1]) as { service: string; datetime?: string; note?: string };
+      const payload = JSON.parse(bookingBlock.json) as { service: string; datetime?: string; note?: string };
       const result = await notifyBotBooking(botId, userId, payload.service ?? "", payload.datetime ?? "", payload.note ?? "");
       if (result.ok) {
         const dateText = payload.datetime ? `\n📅 วัน/เวลา: ${payload.datetime}` : "";
