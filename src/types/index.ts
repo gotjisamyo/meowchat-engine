@@ -1,6 +1,22 @@
 // ─── Core Types ───────────────────────────────────────────────────────────────
 
-export type PersonalityMode = "friendly" | "formal" | "sales" | "cute";
+export type PersonalityMode =
+  | "friendly"
+  | "professional"
+  | "casual"
+  | "cheerful"
+  | "empathetic"
+  | "direct"
+  | "humorous"
+  | "formal"
+  | "luxury"
+  | "thai_polite"
+  | "mentor"
+  | "sales"
+  | "cute"
+  | "serious"
+  | "caring"
+  | "cool";
 export type MessageRole = "user" | "assistant";
 export type Channel = "line" | "messenger" | "web";
 
