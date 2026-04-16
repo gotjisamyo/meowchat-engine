@@ -90,12 +90,75 @@ function buildBrandingBubble(): Record<string, unknown> {
 
 // ─── Reply to LINE via Messaging API ─────────────────────────────────────────
 
+// ─── Product image lookup + Flex Message builder ─────────────────────────────
+
+async function lookupProductImage(
+  botId: string,
+  name: string
+): Promise<{ name: string; price: number; imageUrl?: string } | null> {
+  const backendUrl = process.env.BACKEND_URL;
+  const internalKey = process.env.INTERNAL_API_KEY;
+  if (!backendUrl || !internalKey) return null;
+  try {
+    const res = await fetch(
+      `${backendUrl}/api/internal/product-image?botId=${encodeURIComponent(botId)}&name=${encodeURIComponent(name)}`,
+      { headers: { "x-internal-key": internalKey } }
+    );
+    if (!res.ok) return null;
+    return await res.json() as { name: string; price: number; imageUrl?: string };
+  } catch { return null; }
+}
+
+function buildProductBubble(product: { name: string; price: number; imageUrl?: string }): Record<string, unknown> {
+  const priceText = Number(product.price) > 0 ? `฿${Number(product.price).toLocaleString()}` : "ฟรี";
+  return {
+    type: "bubble",
+    size: "kilo",
+    ...(product.imageUrl ? {
+      hero: {
+        type: "image",
+        url: product.imageUrl,
+        size: "full",
+        aspectRatio: "20:13",
+        aspectMode: "cover",
+      },
+    } : {}),
+    body: {
+      type: "box",
+      layout: "vertical",
+      paddingAll: "16px",
+      spacing: "sm",
+      backgroundColor: "#12121A",
+      contents: [
+        { type: "text", text: product.name, weight: "bold", size: "md", color: "#FFFFFF", wrap: true },
+        { type: "text", text: priceText, size: "xl", weight: "bold", color: "#FF6B35" },
+      ],
+    },
+    footer: {
+      type: "box",
+      layout: "vertical",
+      paddingAll: "12px",
+      backgroundColor: "#12121A",
+      contents: [
+        {
+          type: "button",
+          style: "primary",
+          color: "#FF6B35",
+          height: "sm",
+          action: { type: "message", label: "🛒 สั่งเลย", text: `สั่ง${product.name}เลยค่ะ` },
+        },
+      ],
+    },
+  };
+}
+
 async function replyToLine(
   replyToken: string,
   message: string,
   accessToken: string,
   quickReplies?: Array<{ label: string; text: string }>,
-  showBranding?: boolean
+  showBranding?: boolean,
+  extraMessages?: Record<string, unknown>[]
 ): Promise<void> {
   const textMessage: Record<string, unknown> = { type: "text", text: message };
 
@@ -113,6 +176,9 @@ async function replyToLine(
   }
 
   const messages: Record<string, unknown>[] = [textMessage];
+  if (extraMessages) {
+    messages.push(...extraMessages);
+  }
   if (showBranding) {
     messages.push(buildBrandingBubble());
   }
@@ -417,8 +483,30 @@ async function processLineEvent(
     }
   }
 
+  // ─── Parse [SHOW_PRODUCT:...] signals — build LINE Flex bubbles ──────────
+  const productNames: string[] = [];
+  reply = reply.replace(/\[SHOW_PRODUCT:\s*([^\]]+)\]/g, (_, name: string) => {
+    productNames.push(name.trim());
+    return "";
+  }).trim();
+
+  const flexMessages: Record<string, unknown>[] = [];
+  if (productNames.length > 0) {
+    const products = await Promise.all(
+      productNames.slice(0, 3).map((n) => lookupProductImage(config.botId, n))
+    );
+    const bubbles = products
+      .filter((p): p is { name: string; price: number; imageUrl?: string } => p !== null && !!p.imageUrl)
+      .map(buildProductBubble);
+    if (bubbles.length === 1) {
+      flexMessages.push({ type: "flex", altText: `รายละเอียด: ${bubbles.length > 0 ? productNames[0] : "สินค้า"}`, contents: bubbles[0] });
+    } else if (bubbles.length > 1) {
+      flexMessages.push({ type: "flex", altText: "รายละเอียดสินค้า", contents: { type: "carousel", contents: bubbles } });
+    }
+  }
+
   const qr = !escalated && config.quickReplies?.length ? config.quickReplies : undefined;
-  await replyToLine(replyToken, reply, config.lineChannelAccessToken, qr, showBranding);
+  await replyToLine(replyToken, reply, config.lineChannelAccessToken, qr, showBranding, flexMessages.length > 0 ? flexMessages : undefined);
 
   // Fire-and-forget: log conversation to backend for merchant dashboard
   logConversationToBackend(config.botId, userId, userText, reply, escalated).catch(
