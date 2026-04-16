@@ -37,11 +37,13 @@ function buildBrandingBubble() {
         contents: {
             type: "bubble",
             size: "micro",
+            styles: {
+                body: { backgroundColor: "#1C1B33" },
+            },
             body: {
                 type: "box",
                 layout: "horizontal",
                 backgroundColor: "#1C1B33",
-                cornerRadius: "16px",
                 paddingTop: "lg",
                 paddingBottom: "lg",
                 paddingStart: "lg",
