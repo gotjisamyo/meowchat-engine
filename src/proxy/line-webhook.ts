@@ -319,7 +319,7 @@ export async function processReplySignals(
   if (orderBlock) {
     reply = reply.replace(orderBlock.fullMatch, "").trim();
     try {
-      const payload = JSON.parse(orderBlock.json) as { items: Array<{ name: string; qty: number }>; note?: string };
+      const payload = JSON.parse(orderBlock.json) as { items: Array<{ name: string; qty: number; price?: number }>; note?: string };
       const result = await notifyBotOrder(botId, userId, payload.items ?? [], payload.note ?? "");
       if (result.ok && result.orderNumber) {
         const totalText = result.total ? `฿${result.total.toLocaleString()}` : "";
@@ -360,7 +360,7 @@ export async function processReplySignals(
 async function notifyBotOrder(
   botId: string,
   lineUserId: string,
-  items: Array<{ name: string; qty: number }>,
+  items: Array<{ name: string; qty: number; price?: number }>,
   note: string
 ): Promise<{ ok: boolean; orderNumber?: string; items?: Array<{ productName: string; quantity: number; price: number }>; total?: number; error?: string }> {
   const backendUrl = process.env.BACKEND_URL;
