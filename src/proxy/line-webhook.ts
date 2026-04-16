@@ -231,6 +231,33 @@ async function notifyBotOrder(
   }
 }
 
+// ─── Notify backend to create a booking ──────────────────────────────────────
+
+async function notifyBotBooking(
+  botId: string,
+  lineUserId: string,
+  service: string,
+  datetime: string,
+  note: string
+): Promise<{ ok: boolean; bookingId?: string; error?: string }> {
+  const backendUrl = process.env.BACKEND_URL;
+  const internalKey = process.env.INTERNAL_API_KEY;
+  if (!backendUrl || !internalKey) return { ok: false, error: "not configured" };
+
+  try {
+    const res = await fetch(`${backendUrl}/api/internal/bot-booking`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-internal-key": internalKey },
+      body: JSON.stringify({ botId, lineUserId, service, datetime, note }),
+    });
+    const data = await res.json() as Record<string, unknown>;
+    if (!res.ok) return { ok: false, error: (data.error as string) ?? "unknown" };
+    return { ok: true, bookingId: data.bookingId as string };
+  } catch (e) {
+    return { ok: false, error: String(e) };
+  }
+}
+
 // ─── Notify backend to create a slip order ───────────────────────────────────
 
 async function notifySlipOrder(
@@ -368,6 +395,25 @@ async function processLineEvent(
       }
     } catch (e) {
       console.warn("[engine] CREATE_ORDER parse error:", e);
+    }
+  }
+
+  // ─── Parse [CREATE_BOOKING:...] signal from reply ────────────────────────
+  const bookingMatch = reply.match(/\[CREATE_BOOKING:\s*(\{[\s\S]*?\})\]/);
+  if (bookingMatch) {
+    reply = reply.replace(/\s*\[CREATE_BOOKING:\s*\{[\s\S]*?\}\]/, "").trim();
+    try {
+      const payload = JSON.parse(bookingMatch[1]) as { service: string; datetime?: string; note?: string };
+      const result = await notifyBotBooking(config.botId, userId, payload.service ?? "", payload.datetime ?? "", payload.note ?? "");
+      if (result.ok) {
+        const dateText = payload.datetime ? `\n📅 วัน/เวลา: ${payload.datetime}` : "";
+        reply += `\n\n✅ รับนัดหมายแล้วค่ะ!\n🎯 บริการ: ${payload.service}${dateText}\nร้านค้าจะยืนยันนัดหมายกลับหาคุณค่ะ 🐱`;
+      } else {
+        console.warn(`[engine] bot-booking failed: ${result.error}`);
+        reply += `\n\n⚠️ ขออภัย บันทึกนัดหมายไม่สำเร็จ กรุณาติดต่อร้านค้าโดยตรงค่ะ`;
+      }
+    } catch (e) {
+      console.warn("[engine] CREATE_BOOKING parse error:", e);
     }
   }
 
