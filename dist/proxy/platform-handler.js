@@ -39,6 +39,38 @@ exports.processPlatformEvent = processPlatformEvent;
 const redis_js_1 = require("../memory/redis.js");
 const platform_demo_js_1 = require("../engine/platform-demo.js");
 const STATE_TTL = 60 * 60 * 24 * 30; // 30 days
+// ─── Escalation patterns (คุยกับคน → notify Got) ─────────────────────────────
+const ESCALATION_PATTERNS = [
+    /คุยกับคน|คุยกับพนักงาน|คุยกับทีม|human|เจ้าหน้าที่|ผู้จัดการ|manager/i,
+    /ติดต่อ.*ทีม|ติดต่อ.*งาน|ต้องการ.*คุย/i,
+];
+function isEscalation(text) {
+    return ESCALATION_PATTERNS.some((p) => p.test(text));
+}
+async function notifyGotAndCreateHandoff(userId, userText, token) {
+    const backendUrl = process.env.BACKEND_URL;
+    const internalKey = process.env.INTERNAL_API_KEY;
+    if (backendUrl && internalKey) {
+        // Create handoff record via backend internal API
+        fetch(`${backendUrl}/api/internal/log`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-internal-key": internalKey },
+            body: JSON.stringify({
+                botId: "meowchat-platform",
+                lineUserId: userId,
+                userText,
+                botReply: "ทีมงานจะติดต่อกลับโดยเร็วที่สุดค่ะ 🙏",
+                escalated: true,
+            }),
+        }).catch((e) => console.error("[platform escalation log error]", e.message));
+    }
+    // Also push directly to Got's LINE in case ADMIN_LINE_USER_ID is set (faster notification)
+    const adminId = process.env.ADMIN_LINE_USER_ID;
+    if (adminId) {
+        const display = userId.slice(-6);
+        sendPush(adminId, [{ type: "text", text: `🔔 ลูกค้าขอคุยกับทีม!\nLINE: ${display}\nข้อความ: "${userText}"\n\n👉 app.meowchat.store` }], token).catch(() => { });
+    }
+}
 // ─── State helpers ────────────────────────────────────────────────────────────
 async function getState(userId) {
     try {
@@ -499,6 +531,15 @@ async function processPlatformEvent(event, config) {
     console.log(`[platform] received: "${text}" from userId=${userId}`);
     let state = await getState(userId);
     // ── Rich menu buttons — highest priority, always respond correctly ──────────
+    // ── Escalation — ลูกค้าต้องการคุยกับทีมงาน ──────────────────────────────────
+    if (isEscalation(text)) {
+        await sendReply(buildReply(replyToken, "ขอบคุณที่ติดต่อมานะคะ 🙏 ทีมงาน MeowChat จะติดต่อกลับโดยเร็วที่สุดค่ะ!\n\nสามารถทิ้งข้อมูลเบื้องต้นไว้ได้เลย เช่น ประเภทธุรกิจ หรือคำถามที่ต้องการ", [
+            { label: "📞 ทดลองฟรี 14 วัน", text: "ทดลองฟรี" },
+            { label: "💰 ดูราคา", text: "ราคา" },
+        ]), token);
+        notifyGotAndCreateHandoff(userId, text, token).catch(() => { });
+        return;
+    }
     if (t === "ราคา" || t === "ราคาและแผน" || t === "ราคา / แผน") {
         await sendReply(buildFlexReply(replyToken, flexPricingMsg()), token);
         return;
@@ -530,6 +571,7 @@ async function processPlatformEvent(event, config) {
             { label: "🚀 ทดลองฟรี 14 วัน", text: "ทดลองฟรี" },
             { label: "💰 ดูราคา", text: "ราคา" },
         ]), token);
+        notifyGotAndCreateHandoff(userId, text, token).catch(() => { });
         return;
     }
     if (t === "ดูแดชบอร์ด" || t === "ระบบหลังบ้าน" || t === "ดูระบบ" || t.includes("dashboard")) {

@@ -90,6 +90,162 @@ function buildBrandingBubble(): Record<string, unknown> {
   };
 }
 
+// ─── Order confirmation Flex Message ─────────────────────────────────────────
+
+function buildOrderConfirmFlex(
+  orderNumber: string,
+  items: Array<{ productName: string; quantity: number; price: number }>,
+  total: number,
+  note?: string
+): Record<string, unknown> {
+  const itemRows = items.map((item) => ({
+    type: "box",
+    layout: "horizontal",
+    spacing: "sm",
+    contents: [
+      {
+        type: "text",
+        text: `${item.productName} ×${item.quantity}`,
+        size: "sm",
+        color: "#333333",
+        flex: 5,
+        wrap: true,
+      },
+      {
+        type: "text",
+        text: `฿${(item.price * item.quantity).toLocaleString()}`,
+        size: "sm",
+        color: "#333333",
+        flex: 2,
+        align: "end",
+      },
+    ],
+  }));
+
+  const noteRow = note
+    ? [
+        {
+          type: "text",
+          text: `หมายเหตุ: ${note}`,
+          size: "xs",
+          color: "#888888",
+          wrap: true,
+        },
+      ]
+    : [];
+
+  return {
+    type: "flex",
+    altText: `✅ ออเดอร์ #${orderNumber} — ฿${total.toLocaleString()}`,
+    contents: {
+      type: "bubble",
+      size: "kilo",
+      header: {
+        type: "box",
+        layout: "horizontal",
+        paddingAll: "16px",
+        backgroundColor: "#FFFFFF",
+        spacing: "md",
+        alignItems: "center",
+        contents: [
+          {
+            type: "text",
+            text: "📋",
+            size: "lg",
+            flex: 0,
+          },
+          {
+            type: "box",
+            layout: "vertical",
+            flex: 1,
+            spacing: "none",
+            contents: [
+              {
+                type: "text",
+                text: "ยืนยันออเดอร์",
+                weight: "bold",
+                size: "md",
+                color: "#111111",
+              },
+              {
+                type: "text",
+                text: `#${orderNumber}`,
+                size: "xs",
+                color: "#888888",
+              },
+            ],
+          },
+        ],
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        paddingAll: "16px",
+        paddingTop: "0px",
+        spacing: "sm",
+        contents: [
+          {
+            type: "separator",
+            color: "#EEEEEE",
+          },
+          {
+            type: "box",
+            layout: "vertical",
+            spacing: "xs",
+            margin: "sm",
+            contents: itemRows,
+          },
+          ...noteRow,
+          { type: "separator", color: "#EEEEEE", margin: "sm" },
+          {
+            type: "box",
+            layout: "horizontal",
+            margin: "sm",
+            contents: [
+              {
+                type: "text",
+                text: "รวมทั้งหมด",
+                size: "sm",
+                weight: "bold",
+                color: "#111111",
+                flex: 5,
+              },
+              {
+                type: "text",
+                text: `฿${total.toLocaleString()}`,
+                size: "sm",
+                weight: "bold",
+                color: "#059669",
+                flex: 2,
+                align: "end",
+              },
+            ],
+          },
+        ],
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        paddingAll: "12px",
+        paddingTop: "0px",
+        contents: [
+          {
+            type: "button",
+            style: "primary",
+            color: "#059669",
+            height: "sm",
+            action: {
+              type: "message",
+              label: "ยืนยันออเดอร์นี้",
+              text: `ยืนยันออเดอร์ #${orderNumber} แล้วค่ะ`,
+            },
+          },
+        ],
+      },
+    },
+  };
+}
+
 // ─── Reply to LINE via Messaging API ─────────────────────────────────────────
 
 // ─── Product image lookup + Flex Message builder ─────────────────────────────
@@ -311,8 +467,9 @@ export async function processReplySignals(
   rawReply: string,
   botId: string,
   userId: string
-): Promise<string> {
+): Promise<{ reply: string; flexMessages: Record<string, unknown>[] }> {
   let reply = rawReply;
+  const flexMessages: Record<string, unknown>[] = [];
 
   // [CREATE_ORDER:...] — create order in backend
   const orderBlock = extractSignalBlock(reply, "CREATE_ORDER");
@@ -322,8 +479,12 @@ export async function processReplySignals(
       const payload = JSON.parse(orderBlock.json) as { items: Array<{ name: string; qty: number; price?: number }>; note?: string };
       const result = await notifyBotOrder(botId, userId, payload.items ?? [], payload.note ?? "");
       if (result.ok && result.orderNumber) {
-        const totalText = result.total ? `฿${result.total.toLocaleString()}` : "";
-        reply += `\n\n📋 หมายเลขออเดอร์: ${result.orderNumber}${totalText ? `\n💰 ยอดรวม: ${totalText}` : ""}\nร้านค้าได้รับออเดอร์แล้ว รอการยืนยันจากร้านค่ะ 🐱`;
+        if (result.items && result.items.length > 0 && result.total) {
+          flexMessages.push(buildOrderConfirmFlex(result.orderNumber, result.items, result.total, payload.note));
+        } else {
+          const totalText = result.total ? `฿${result.total.toLocaleString()}` : "";
+          reply += `\n\n📋 หมายเลขออเดอร์: ${result.orderNumber}${totalText ? `\n💰 ยอดรวม: ${totalText}` : ""}\nร้านค้าได้รับออเดอร์แล้ว รอการยืนยันจากร้านค่ะ 🐱`;
+        }
       } else if (!result.ok) {
         console.warn(`[engine] bot-order failed: ${result.error}`);
         reply += `\n\n⚠️ ขออภัย บันทึกออเดอร์ไม่สำเร็จ กรุณาติดต่อร้านค้าโดยตรงค่ะ`;
@@ -352,7 +513,7 @@ export async function processReplySignals(
     }
   }
 
-  return reply;
+  return { reply, flexMessages };
 }
 
 // ─── Create order from bot via backend internal API ──────────────────────────
@@ -530,7 +691,8 @@ async function processLineEvent(
   let { reply, escalated, showBranding } = await handleMessage(webhookEvent, config);
 
   // ─── Process bot signals (CREATE_ORDER, CREATE_BOOKING, strip SHOW_PRODUCT) ─
-  reply = await processReplySignals(reply, config.botId, userId);
+  const { reply: processedReply, flexMessages: signalFlexMessages } = await processReplySignals(reply, config.botId, userId);
+  reply = processedReply;
 
   // ─── Parse remaining [SHOW_PRODUCT:...] → LINE Flex bubbles ──────────────
   const productNames: string[] = [];
@@ -539,7 +701,7 @@ async function processLineEvent(
     return "";
   }).trim();
 
-  const flexMessages: Record<string, unknown>[] = [];
+  const flexMessages: Record<string, unknown>[] = [...signalFlexMessages];
   if (productNames.length > 0) {
     const products = await Promise.all(
       productNames.slice(0, 3).map((n) => lookupProductImage(config.botId, n))

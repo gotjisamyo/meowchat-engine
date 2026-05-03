@@ -126,10 +126,10 @@ app.post("/admin/bots/:botId/simulate", async (c) => {
   const { reply: rawReply, escalated } = await handleMessage(fakeEvent, config);
 
   // Process signals (order/booking creation) + strip SHOW_PRODUCT
-  let reply = await processReplySignals(rawReply, config.botId, "simulate-user");
-  reply = reply.replace(/\[SHOW_PRODUCT:\s*[^\]]+\]/g, "").trim();
+  const { reply: processedReply, flexMessages } = await processReplySignals(rawReply, config.botId, "simulate-user");
+  const reply = processedReply.replace(/\[SHOW_PRODUCT:\s*[^\]]+\]/g, "").trim();
 
-  return c.json({ reply, escalated, botName: config.botName });
+  return c.json({ reply, escalated, botName: config.botName, flexMessages });
 });
 
 // ─── Start ────────────────────────────────────────────────────────────────────
