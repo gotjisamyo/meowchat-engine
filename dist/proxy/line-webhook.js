@@ -84,6 +84,172 @@ function buildBrandingBubble() {
         },
     };
 }
+// ─── Order confirmation Flex Message ─────────────────────────────────────────
+function buildOrderConfirmFlex(orderNumber, items, total, note) {
+    const itemRows = items.map((item) => ({
+        type: "box",
+        layout: "horizontal",
+        spacing: "sm",
+        contents: [
+            {
+                type: "text",
+                text: `${item.productName} ×${item.quantity}`,
+                size: "sm",
+                color: "#333333",
+                flex: 5,
+                wrap: true,
+            },
+            {
+                type: "text",
+                text: `฿${(item.price * item.quantity).toLocaleString()}`,
+                size: "sm",
+                color: "#333333",
+                flex: 2,
+                align: "end",
+            },
+        ],
+    }));
+    const noteRow = note
+        ? [
+            {
+                type: "text",
+                text: `หมายเหตุ: ${note}`,
+                size: "xs",
+                color: "#888888",
+                wrap: true,
+            },
+        ]
+        : [];
+    return {
+        type: "flex",
+        altText: `✅ ออเดอร์ #${orderNumber} — ฿${total.toLocaleString()}`,
+        contents: {
+            type: "bubble",
+            size: "kilo",
+            header: {
+                type: "box",
+                layout: "horizontal",
+                paddingAll: "16px",
+                backgroundColor: "#FFFFFF",
+                spacing: "md",
+                alignItems: "center",
+                contents: [
+                    {
+                        type: "text",
+                        text: "📋",
+                        size: "lg",
+                        flex: 0,
+                    },
+                    {
+                        type: "box",
+                        layout: "vertical",
+                        flex: 1,
+                        spacing: "none",
+                        contents: [
+                            {
+                                type: "text",
+                                text: "ยืนยันออเดอร์",
+                                weight: "bold",
+                                size: "md",
+                                color: "#111111",
+                            },
+                            {
+                                type: "text",
+                                text: `#${orderNumber}`,
+                                size: "xs",
+                                color: "#888888",
+                            },
+                        ],
+                    },
+                ],
+            },
+            body: {
+                type: "box",
+                layout: "vertical",
+                paddingAll: "16px",
+                paddingTop: "0px",
+                spacing: "sm",
+                contents: [
+                    {
+                        type: "separator",
+                        color: "#EEEEEE",
+                    },
+                    {
+                        type: "box",
+                        layout: "vertical",
+                        spacing: "xs",
+                        margin: "sm",
+                        contents: itemRows,
+                    },
+                    ...noteRow,
+                    { type: "separator", color: "#EEEEEE", margin: "sm" },
+                    {
+                        type: "box",
+                        layout: "horizontal",
+                        margin: "sm",
+                        contents: [
+                            {
+                                type: "text",
+                                text: "รวมทั้งหมด",
+                                size: "sm",
+                                weight: "bold",
+                                color: "#111111",
+                                flex: 5,
+                            },
+                            {
+                                type: "text",
+                                text: `฿${total.toLocaleString()}`,
+                                size: "sm",
+                                weight: "bold",
+                                color: "#059669",
+                                flex: 2,
+                                align: "end",
+                            },
+                        ],
+                    },
+                ],
+            },
+            footer: {
+                type: "box",
+                layout: "vertical",
+                paddingAll: "12px",
+                paddingTop: "0px",
+                contents: [
+                    {
+                        type: "button",
+                        style: "primary",
+                        color: "#059669",
+                        height: "sm",
+                        action: {
+                            type: "postback",
+                            label: "ยืนยันออเดอร์นี้",
+                            data: `CONFIRM_ORDER:${orderNumber}`,
+                            displayText: "ยืนยันออเดอร์นี้แล้วค่ะ",
+                        },
+                    },
+                ],
+            },
+        },
+    };
+}
+// ─── Confirm order via backend internal API ───────────────────────────────────
+async function confirmOrderViaBackend(botId, orderNumber) {
+    const backendUrl = process.env.BACKEND_URL;
+    const internalKey = process.env.INTERNAL_API_KEY;
+    if (!backendUrl || !internalKey)
+        return { ok: false, error: "not configured" };
+    try {
+        const res = await fetch(`${backendUrl}/api/internal/confirm-order`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-internal-key": internalKey },
+            body: JSON.stringify({ orderNumber, botId }),
+        });
+        return await res.json();
+    }
+    catch (e) {
+        return { ok: false, error: String(e) };
+    }
+}
 // ─── Reply to LINE via Messaging API ─────────────────────────────────────────
 // ─── Product image lookup + Flex Message builder ─────────────────────────────
 async function lookupProductImage(botId, name) {
@@ -269,6 +435,7 @@ function extractSignalBlock(text, signalName) {
 }
 async function processReplySignals(rawReply, botId, userId) {
     let reply = rawReply;
+    const flexMessages = [];
     // [CREATE_ORDER:...] — create order in backend
     const orderBlock = extractSignalBlock(reply, "CREATE_ORDER");
     if (orderBlock) {
@@ -277,8 +444,13 @@ async function processReplySignals(rawReply, botId, userId) {
             const payload = JSON.parse(orderBlock.json);
             const result = await notifyBotOrder(botId, userId, payload.items ?? [], payload.note ?? "");
             if (result.ok && result.orderNumber) {
-                const totalText = result.total ? `฿${result.total.toLocaleString()}` : "";
-                reply += `\n\n📋 หมายเลขออเดอร์: ${result.orderNumber}${totalText ? `\n💰 ยอดรวม: ${totalText}` : ""}\nร้านค้าได้รับออเดอร์แล้ว รอการยืนยันจากร้านค่ะ 🐱`;
+                if (result.items && result.items.length > 0 && result.total) {
+                    flexMessages.push(buildOrderConfirmFlex(result.orderNumber, result.items, result.total, payload.note));
+                }
+                else {
+                    const totalText = result.total ? `฿${result.total.toLocaleString()}` : "";
+                    reply += `\n\n📋 หมายเลขออเดอร์: ${result.orderNumber}${totalText ? `\n💰 ยอดรวม: ${totalText}` : ""}\nร้านค้าได้รับออเดอร์แล้ว รอการยืนยันจากร้านค่ะ 🐱`;
+                }
             }
             else if (!result.ok) {
                 console.warn(`[engine] bot-order failed: ${result.error}`);
@@ -309,7 +481,7 @@ async function processReplySignals(rawReply, botId, userId) {
             console.warn("[engine] CREATE_BOOKING parse error:", e);
         }
     }
-    return reply;
+    return { reply, flexMessages };
 }
 // ─── Create order from bot via backend internal API ──────────────────────────
 async function notifyBotOrder(botId, lineUserId, items, note) {
@@ -369,13 +541,33 @@ async function notifySlipOrder(botId, lineUserId, slipData, mode) {
     });
 }
 async function processLineEvent(event, config) {
-    if (event.type !== "message")
-        return;
-    const msg = event.message;
     const userId = event.source?.userId;
     const replyToken = event.replyToken;
     if (!userId || !replyToken)
         return;
+    // ─── Handle postback (e.g. customer confirms order via Flex button) ───────
+    if (event.type === "postback") {
+        const data = event.postback?.data ?? "";
+        if (data.startsWith("CONFIRM_ORDER:")) {
+            const orderNumber = data.replace("CONFIRM_ORDER:", "").trim();
+            const result = await confirmOrderViaBackend(config.botId, orderNumber);
+            let replyText;
+            if (result.ok && result.alreadyConfirmed) {
+                replyText = `✅ ออเดอร์ #${orderNumber} ได้รับการยืนยันไปแล้วค่ะ`;
+            }
+            else if (result.ok) {
+                replyText = `✅ ยืนยันออเดอร์ #${orderNumber} เรียบร้อยแล้วค่ะ! ร้านค้ารับทราบแล้ว รอเตรียมออเดอร์ให้นะคะ 🐱`;
+            }
+            else {
+                replyText = `⚠️ ขออภัย ยืนยันออเดอร์ไม่สำเร็จ กรุณาติดต่อร้านค้าโดยตรงค่ะ`;
+            }
+            await replyToLine(replyToken, replyText, config.lineChannelAccessToken);
+        }
+        return;
+    }
+    if (event.type !== "message")
+        return;
+    const msg = event.message;
     // ─── Handle image messages with slip detection ────────────────────────────
     if (msg?.type === "image" && config.slipVerifyMode && config.slipVerifyMode !== "off") {
         const imageData = await downloadLineImage(msg.id, config.lineChannelAccessToken);
@@ -459,14 +651,15 @@ async function processLineEvent(event, config) {
     };
     let { reply, escalated, showBranding } = await handleMessage(webhookEvent, config);
     // ─── Process bot signals (CREATE_ORDER, CREATE_BOOKING, strip SHOW_PRODUCT) ─
-    reply = await processReplySignals(reply, config.botId, userId);
+    const { reply: processedReply, flexMessages: signalFlexMessages } = await processReplySignals(reply, config.botId, userId);
+    reply = processedReply;
     // ─── Parse remaining [SHOW_PRODUCT:...] → LINE Flex bubbles ──────────────
     const productNames = [];
     reply = reply.replace(/\[SHOW_PRODUCT:\s*([^\]]+)\]/g, (_, name) => {
         productNames.push(name.trim());
         return "";
     }).trim();
-    const flexMessages = [];
+    const flexMessages = [...signalFlexMessages];
     if (productNames.length > 0) {
         const products = await Promise.all(productNames.slice(0, 3).map((n) => lookupProductImage(config.botId, n)));
         const bubbles = products
