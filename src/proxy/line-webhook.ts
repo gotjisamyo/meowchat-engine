@@ -235,15 +235,37 @@ function buildOrderConfirmFlex(
             color: "#059669",
             height: "sm",
             action: {
-              type: "message",
+              type: "postback",
               label: "ยืนยันออเดอร์นี้",
-              text: `ยืนยันออเดอร์ #${orderNumber} แล้วค่ะ`,
+              data: `CONFIRM_ORDER:${orderNumber}`,
+              displayText: "ยืนยันออเดอร์นี้แล้วค่ะ",
             },
           },
         ],
       },
     },
   };
+}
+
+// ─── Confirm order via backend internal API ───────────────────────────────────
+
+async function confirmOrderViaBackend(
+  botId: string,
+  orderNumber: string
+): Promise<{ ok: boolean; alreadyConfirmed?: boolean; error?: string }> {
+  const backendUrl = process.env.BACKEND_URL;
+  const internalKey = process.env.INTERNAL_API_KEY;
+  if (!backendUrl || !internalKey) return { ok: false, error: "not configured" };
+  try {
+    const res = await fetch(`${backendUrl}/api/internal/confirm-order`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-internal-key": internalKey },
+      body: JSON.stringify({ orderNumber, botId }),
+    });
+    return await res.json() as { ok: boolean; alreadyConfirmed?: boolean; error?: string };
+  } catch (e) {
+    return { ok: false, error: String(e) };
+  }
 }
 
 // ─── Reply to LINE via Messaging API ─────────────────────────────────────────
@@ -595,12 +617,31 @@ async function processLineEvent(
   event: Record<string, unknown>,
   config: BotConfig
 ): Promise<void> {
-  if (event.type !== "message") return;
-  const msg = event.message as Record<string, unknown>;
-
   const userId = (event.source as Record<string, string>)?.userId;
   const replyToken = event.replyToken as string;
   if (!userId || !replyToken) return;
+
+  // ─── Handle postback (e.g. customer confirms order via Flex button) ───────
+  if (event.type === "postback") {
+    const data = (event.postback as Record<string, string>)?.data ?? "";
+    if (data.startsWith("CONFIRM_ORDER:")) {
+      const orderNumber = data.replace("CONFIRM_ORDER:", "").trim();
+      const result = await confirmOrderViaBackend(config.botId, orderNumber);
+      let replyText: string;
+      if (result.ok && result.alreadyConfirmed) {
+        replyText = `✅ ออเดอร์ #${orderNumber} ได้รับการยืนยันไปแล้วค่ะ`;
+      } else if (result.ok) {
+        replyText = `✅ ยืนยันออเดอร์ #${orderNumber} เรียบร้อยแล้วค่ะ! ร้านค้ารับทราบแล้ว รอเตรียมออเดอร์ให้นะคะ 🐱`;
+      } else {
+        replyText = `⚠️ ขออภัย ยืนยันออเดอร์ไม่สำเร็จ กรุณาติดต่อร้านค้าโดยตรงค่ะ`;
+      }
+      await replyToLine(replyToken, replyText, config.lineChannelAccessToken);
+    }
+    return;
+  }
+
+  if (event.type !== "message") return;
+  const msg = event.message as Record<string, unknown>;
 
   // ─── Handle image messages with slip detection ────────────────────────────
   if (msg?.type === "image" && config.slipVerifyMode && config.slipVerifyMode !== "off") {
