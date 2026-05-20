@@ -270,6 +270,27 @@ async function confirmOrderViaBackend(
 
 // ─── Reply to LINE via Messaging API ─────────────────────────────────────────
 
+// ─── Products menu lookup (all active products for SHOW_MENU) ────────────────
+
+async function lookupProductsMenu(
+  botId: string
+): Promise<Array<{ name: string; price: number; imageUrl?: string }>> {
+  const backendUrl = process.env.BACKEND_URL;
+  const internalKey = process.env.INTERNAL_API_KEY;
+  if (!backendUrl || !internalKey) return [];
+  try {
+    const res = await fetch(
+      `${backendUrl}/api/internal/products-menu?botId=${encodeURIComponent(botId)}`,
+      { headers: { "x-internal-key": internalKey } }
+    );
+    if (!res.ok) return [];
+    const data = await res.json() as { products: Array<{ name: string; price: number; imageUrl?: string }> };
+    return data.products ?? [];
+  } catch {
+    return [];
+  }
+}
+
 // ─── Product image lookup + Flex Message builder ─────────────────────────────
 
 async function lookupProductImage(
@@ -532,6 +553,20 @@ export async function processReplySignals(
       }
     } catch (e) {
       console.warn("[engine] CREATE_BOOKING parse error:", e);
+    }
+  }
+
+  // [SHOW_MENU] — show carousel of all active products/services
+  if (reply.includes("[SHOW_MENU]")) {
+    reply = reply.replace(/\[SHOW_MENU\]/g, "").trim();
+    const products = await lookupProductsMenu(botId);
+    const bubbles = products
+      .filter((p): p is { name: string; price: number; imageUrl: string } => !!p.imageUrl)
+      .map(buildProductBubble);
+    if (bubbles.length === 1) {
+      flexMessages.push({ type: "flex", altText: "เมนูสินค้า/บริการ", contents: bubbles[0] });
+    } else if (bubbles.length > 1) {
+      flexMessages.push({ type: "flex", altText: "เมนูสินค้า/บริการทั้งหมด", contents: { type: "carousel", contents: bubbles } });
     }
   }
 
